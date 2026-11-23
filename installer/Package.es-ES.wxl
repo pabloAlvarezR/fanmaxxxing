@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="es-ES" Codepage="1252" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="AppDescription" Value="Enfriador post-vicio: ventiladores al máximo y apagado sin calor residual" />
+  <String Id="Downgrade" Value="Ya tienes instalada una versión más nueva de FanMaxxxing. Desinstálala primero si quieres volver atrás." />
+  <String Id="LaunchApp" Value="Abrir FanMaxxxing ahora (y que empiece el frío)" />
+  <String Id="ShortcutMain" Value="FanMaxxxing" />
+  <String Id="ShortcutCoolOff" Value="Enfriar y apagar" />
+  <String Id="ShortcutCoolOffDesktop" Value="Enfriar y apagar (FanMaxxxing)" />
+  <String Id="ShortcutCool" Value="Enfriar ahora" />
+  <String Id="ShortcutSim" Value="FanMaxxxing (modo simulación)" />
+  <String Id="ShortcutReadme" Value="Léeme de FanMaxxxing" />
+  <String Id="DescCoolOff" Value="Ventiladores al máximo unos minutos y después apaga el PC" />
+  <String Id="DescCool" Value="Ventiladores al máximo unos minutos" />
+  <String Id="DescSim" Value="Prueba la app con temperaturas de mentira, sin tocar el hardware" />
+</WixLocalization>

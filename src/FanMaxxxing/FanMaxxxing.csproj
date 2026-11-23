@@ -1,0 +1,50 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>FanMaxxxing</AssemblyName>
+    <RootNamespace>FanMaxxxing</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\fan.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <Product>FanMaxxxing</Product>
+    <Description>Enfriador post-vicio: ventiladores al máximo y apagado sin calor residual.</Description>
+    <Copyright>FanMaxxxing</Copyright>
+    <SatelliteResourceLanguages>es</SatelliteResourceLanguages>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <TieredPGO>true</TieredPGO>
+    <!-- WFAC010: aviso de WinForms sobre DPI; la app es WPF y el manifiesto es lo correcto aquí -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <!-- WinForms solo se usa para el icono de la bandeja: evitamos ambigüedades con WPF -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LibreHardwareMonitorLib" Version="0.9.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\fan.ico" />
+  </ItemGroup>
+
+  <!-- Main propio (Program.cs): App.xaml deja de generar el suyo -->
+  <PropertyGroup>
+    <StartupObject>FanMaxxxing.Program</StartupObject>
+  </PropertyGroup>
+  <ItemGroup>
+    <ApplicationDefinition Remove="App.xaml" />
+    <Page Include="App.xaml" />
+  </ItemGroup>
+
+</Project>

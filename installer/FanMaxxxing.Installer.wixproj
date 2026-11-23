@@ -1,0 +1,18 @@
+<Project Sdk="WixToolset.Sdk/5.0.2">
+  <!--
+    Instalador MSI de FanMaxxxing (WiX 5, licencia MS-RL).
+    Antes de compilarlo hay que publicar la app en ..\publish (lo hace build-installer.ps1).
+  -->
+  <PropertyGroup>
+    <OutputName>FanMaxxxing-Setup</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <Cultures>es-ES</Cultures>
+    <AppPublishDir Condition="'$(AppPublishDir)' == ''">$(MSBuildThisFileDirectory)..\publish</AppPublishDir>
+    <DefineConstants>PublishDir=$(AppPublishDir);RepoDir=$(MSBuildThisFileDirectory)..</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="5.0.2" />
+    <PackageReference Include="WixToolset.Util.wixext" Version="5.0.2" />
+  </ItemGroup>
+</Project>

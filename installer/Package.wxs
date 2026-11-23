@@ -1,0 +1,107 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <!-- La versión del paquete se toma de la del propio FanMaxxxing.exe -->
+  <Package Name="FanMaxxxing"
+           Manufacturer="FanMaxxxing"
+           Version="!(bind.FileVersion.MainExe)"
+           UpgradeCode="4446F73C-9118-41D5-A2E8-8C86B933E8C7"
+           Scope="perMachine"
+           Language="3082"
+           Codepage="1252"
+           Compressed="yes">
+
+    <SummaryInformation Description="!(loc.AppDescription)" Manufacturer="FanMaxxxing" />
+
+    <!-- Instalar una versión nueva sustituye a la anterior (los ajustes del usuario se conservan) -->
+    <MajorUpgrade DowngradeErrorMessage="!(loc.Downgrade)" AllowSameVersionUpgrades="yes" />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- Aspecto en "Agregar o quitar programas" -->
+    <Icon Id="AppIcon" SourceFile="$(RepoDir)\src\FanMaxxxing\Assets\fan.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon" />
+    <Property Id="ARPCOMMENTS" Value="!(loc.AppDescription)" />
+    <Property Id="ARPNOREPAIR" Value="yes" />
+
+    <!-- Interfaz: bienvenida → licencia → carpeta → instalar → fin (con "abrir ahora") -->
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <WixVariable Id="WixUIBannerBmp" Value="assets\banner.bmp" />
+    <WixVariable Id="WixUIDialogBmp" Value="assets\dialog.bmp" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchApp)" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#MainExe]" />
+    <CustomAction Id="LaunchApplication" DllEntry="WixShellExec" Impersonate="yes" BinaryRef="Wix4UtilCA_X64" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchApplication"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 AND NOT Installed" />
+    </UI>
+
+    <!-- Cerrar FanMaxxxing si está abierto (al actualizar o desinstalar). El mensaje de fin de sesión
+         hace que la app devuelva los ventiladores a la normalidad antes de cerrarse. -->
+    <util:CloseApplication Id="CloseFanMaxxxing" Target="FanMaxxxing.exe"
+                           CloseMessage="no" EndSessionMessage="yes" ElevatedEndSessionMessage="yes"
+                           TerminateProcess="1" Timeout="10" RebootPrompt="no" />
+
+    <!-- Al desinstalar (no al actualizar): borrar las tareas programadas que crea la app -->
+    <SetProperty Id="CleanupTasks" Value="&quot;[INSTALLFOLDER]FanMaxxxing.exe&quot; --uninstall-cleanup"
+                 Before="CleanupTasks" Sequence="execute" />
+    <CustomAction Id="CleanupTasks" DllEntry="WixQuietExec" BinaryRef="Wix4UtilCA_X64"
+                  Execute="deferred" Impersonate="no" Return="ignore" />
+    <InstallExecuteSequence>
+      <Custom Action="CleanupTasks" Before="RemoveFiles"
+              Condition="REMOVE=&quot;ALL&quot; AND NOT UPGRADINGPRODUCTCODE" />
+    </InstallExecuteSequence>
+
+    <!-- Carpetas -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="FanMaxxxing" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="AppMenuFolder" Name="FanMaxxxing" />
+    </StandardDirectory>
+    <StandardDirectory Id="DesktopFolder" />
+
+    <!-- Propiedad para no crear accesos en el escritorio: msiexec /i FanMaxxxing-Setup.msi DESKTOPSHORTCUTS=0 -->
+    <Property Id="DESKTOPSHORTCUTS" Value="1" />
+
+    <Feature Id="Main" Title="FanMaxxxing" Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="MenuShortcuts" />
+      <ComponentRef Id="DesktopShortcuts" />
+    </Feature>
+
+    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
+      <Component Id="MainExeComponent">
+        <File Id="MainExe" Source="$(PublishDir)\FanMaxxxing.exe" KeyPath="yes" />
+      </Component>
+      <Component Id="ReadmeComponent">
+        <File Id="Readme" Source="$(RepoDir)\README.md" Name="LEEME.md" KeyPath="yes" />
+      </Component>
+    </ComponentGroup>
+
+    <Component Id="MenuShortcuts" Directory="AppMenuFolder" Guid="6D1C8E43-5D7B-4C5E-9E7C-1F0A2B3C4D51">
+      <Shortcut Id="MenuMain" Name="!(loc.ShortcutMain)" Description="!(loc.AppDescription)"
+                Target="[INSTALLFOLDER]FanMaxxxing.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+      <Shortcut Id="MenuCoolOff" Name="!(loc.ShortcutCoolOff)" Description="!(loc.DescCoolOff)"
+                Target="[INSTALLFOLDER]FanMaxxxing.exe" Arguments="--start --then shutdown" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+      <Shortcut Id="MenuCool" Name="!(loc.ShortcutCool)" Description="!(loc.DescCool)"
+                Target="[INSTALLFOLDER]FanMaxxxing.exe" Arguments="--start --then nothing" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+      <Shortcut Id="MenuSim" Name="!(loc.ShortcutSim)" Description="!(loc.DescSim)"
+                Target="[INSTALLFOLDER]FanMaxxxing.exe" Arguments="--sim" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+      <Shortcut Id="MenuReadme" Name="!(loc.ShortcutReadme)" Target="[INSTALLFOLDER]LEEME.md" />
+      <RemoveFolder Id="RemoveAppMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\FanMaxxxing\Installer" Name="MenuShortcuts" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcuts" Directory="DesktopFolder" Guid="0B7E2A91-3C4D-4E5F-8A6B-7C8D9E0F1A2B"
+               Condition="DESKTOPSHORTCUTS = 1">
+      <Shortcut Id="DeskMain" Name="!(loc.ShortcutMain)" Description="!(loc.AppDescription)"
+                Target="[INSTALLFOLDER]FanMaxxxing.exe" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+      <Shortcut Id="DeskCoolOff" Name="!(loc.ShortcutCoolOffDesktop)" Description="!(loc.DescCoolOff)"
+                Target="[INSTALLFOLDER]FanMaxxxing.exe" Arguments="--start --then shutdown" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
+      <RegistryValue Root="HKCU" Key="Software\FanMaxxxing\Installer" Name="DesktopShortcuts" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+  </Package>
+</Wix>

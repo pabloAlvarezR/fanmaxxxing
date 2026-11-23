@@ -1,0 +1,261 @@
+<Window x:Class="FanMaxxxing.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Ajustes · FanMaxxxing" Width="760" Height="800" MinWidth="680" MinHeight="560"
+        WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterOwner" ShowInTaskbar="False"
+        Background="#0D1124" Foreground="{StaticResource Text}" FontFamily="{StaticResource UiFont}" UseLayoutRounding="True">
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="52" ResizeBorderThickness="6" CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+    </WindowChrome.WindowChrome>
+    <Window.Resources>
+        <Style x:Key="Card" TargetType="Border">
+            <Setter Property="Background" Value="#151B33" />
+            <Setter Property="BorderBrush" Value="#2B3560" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="16" />
+            <Setter Property="Padding" Value="18,14" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="H" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="{StaticResource NumFont}" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,0,0,10" />
+        </Style>
+        <Style x:Key="Label" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="{StaticResource TextDim}" />
+            <Setter Property="Margin" Value="0,8,0,4" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style x:Key="Hint" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="11.5" />
+            <Setter Property="Foreground" Value="{StaticResource TextFaint}" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+            <Setter Property="Margin" Value="0,2,0,0" />
+        </Style>
+        <Style TargetType="ListBox">
+            <Setter Property="Background" Value="#0D1226" />
+            <Setter Property="BorderBrush" Value="#2B3560" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+        </Style>
+        <Style TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{StaticResource Text}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Border x:Name="Bd" CornerRadius="8" Padding="10,6" Background="Transparent" Margin="0,1">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#1FFFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bd" Property="Background" Value="#3322D3EE" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="52" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="22,0,8,0">
+            <TextBlock VerticalAlignment="Center" FontFamily="{StaticResource NumFont}" FontSize="20" FontWeight="Bold">
+                <Run Text="AJUSTES" /><Run Text="  ·  " Foreground="{StaticResource TextFaint}" /><Run Text="cuarto de máquinas" FontSize="14" FontWeight="Normal" Foreground="{StaticResource TextDim}" />
+            </TextBlock>
+            <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" HorizontalAlignment="Right" VerticalAlignment="Center"
+                    WindowChrome.IsHitTestVisibleInChrome="True" Click="Cancel_Click" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="22,4,22,4">
+            <StackPanel>
+                <!-- ===================== MOTOR ===================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource H}" Text="🌀 Motor de ventiladores" />
+                        <WrapPanel>
+                            <RadioButton x:Name="BkAuto" Style="{StaticResource Pill}" GroupName="bk" Content="Automático" Checked="Backend_Changed" />
+                            <RadioButton x:Name="BkFanControl" Style="{StaticResource Pill}" GroupName="bk" Content="FanControl" Checked="Backend_Changed" />
+                            <RadioButton x:Name="BkDirect" Style="{StaticResource Pill}" GroupName="bk" Content="Directo (experimental)" Checked="Backend_Changed" />
+                            <RadioButton x:Name="BkSim" Style="{StaticResource Pill}" GroupName="bk" Content="Simulación" Checked="Backend_Changed" />
+                        </WrapPanel>
+                        <Border CornerRadius="10" Background="#0D1226" Padding="12,8" Margin="0,4,0,0">
+                            <StackPanel Orientation="Horizontal">
+                                <Ellipse x:Name="BkDot" Width="10" Height="10" Fill="{StaticResource TextFaint}" VerticalAlignment="Center" />
+                                <TextBlock x:Name="BkStatus" Margin="10,0,0,0" TextWrapping="Wrap" FontSize="12.5" VerticalAlignment="Center" MaxWidth="600" />
+                            </StackPanel>
+                        </Border>
+
+                        <!-- FanControl -->
+                        <StackPanel x:Name="FanControlPanel" Margin="0,6,0,0">
+                            <TextBlock Style="{StaticResource Label}" Text="Ruta de FanControl.exe" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="ExePathBox" Style="{StaticResource DarkTextBox}" LostFocus="ExePathBox_LostFocus" />
+                                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Content="Buscar…" Click="BrowseExe_Click" />
+                                <Button Grid.Column="2" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Content="Detectar" Click="DetectExe_Click" />
+                            </Grid>
+
+                            <TextBlock Style="{StaticResource Label}" Text="Tu config normal (la que se vuelve a cargar al terminar)" />
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <ListBox x:Name="ConfigList" MaxHeight="130" SelectionChanged="ConfigList_SelectionChanged" />
+                                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Margin="8,0,0,0" VerticalAlignment="Top" Content="Otra…" Click="BrowseConfig_Click" />
+                            </Grid>
+                            <TextBlock Style="{StaticResource Hint}" Text="En «Automática» se usa la config que FanControl guardó por última vez, o sea, la que tienes activa." />
+
+                            <TextBlock Style="{StaticResource Label}" Text="Ventiladores que se pondrán al 100 % (leídos de tu config)" />
+                            <Border CornerRadius="8" Background="#0D1226" BorderBrush="#2B3560" BorderThickness="1" Padding="10,6" MaxHeight="200">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="ControlsPanel" />
+                                </ScrollViewer>
+                            </Border>
+
+                            <CheckBox x:Name="UseCustomMax" Style="{StaticResource Switch}" Margin="0,12,0,0" Checked="UseCustomMax_Changed" Unchecked="UseCustomMax_Changed"
+                                      Content="Usar mi propia config MAX (en vez de generarla automáticamente)" />
+                            <Grid x:Name="CustomMaxRow" Margin="48,4,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBox x:Name="CustomMaxBox" Style="{StaticResource DarkTextBox}" />
+                                <Button Grid.Column="1" Style="{StaticResource GhostButton}" Margin="8,0,0,0" Content="Buscar…" Click="BrowseCustomMax_Click" />
+                            </Grid>
+                            <CheckBox x:Name="CloseFcCheck" Style="{StaticResource Switch}" Margin="0,8,0,0"
+                                      Content="Si FanControl estaba cerrado al empezar, cerrarlo al terminar" />
+                        </StackPanel>
+
+                        <!-- Directo -->
+                        <StackPanel x:Name="DirectPanel" Margin="0,8,0,0">
+                            <TextBlock Style="{StaticResource Hint}" FontSize="12.5"
+                                       Text="Controla los ventiladores de la placa base y de la GPU directamente con LibreHardwareMonitor (la misma librería que usa FanControl por dentro). Necesita el driver PawnIO y que FanControl esté cerrado para no pelearse por los ventiladores. Al terminar, se devuelven a la BIOS/driver." />
+                            <TextBlock Style="{StaticResource Label}" Text="Ventiladores detectados" />
+                            <Border CornerRadius="8" Background="#0D1226" BorderBrush="#2B3560" BorderThickness="1" Padding="10,6" MaxHeight="180">
+                                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="DirectControlsPanel" />
+                                </ScrollViewer>
+                            </Border>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                            <Button x:Name="TestButton" Style="{StaticResource GhostButton}" Click="Test_Click" Background="#2222D3EE" BorderBrush="{StaticResource Cyan}">
+                                <TextBlock x:Name="TestButtonText" Text="🧪  Probar 10 segundos" />
+                            </Button>
+                            <TextBlock x:Name="TestResult" Margin="12,0,0,0" VerticalAlignment="Center" FontSize="12" Foreground="{StaticResource TextDim}" TextWrapping="Wrap" MaxWidth="440" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- ===================== ENFRIAMIENTO ===================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource H}" Text="❄ Enfriamiento" />
+                        <TextBlock Style="{StaticResource Label}">
+                            <Run Text="Duración:" /> <Run x:Name="DurationValue" Foreground="{StaticResource Text}" FontWeight="SemiBold" />
+                        </TextBlock>
+                        <Slider x:Name="DurationSlider" Style="{StaticResource NeonSlider}" Minimum="1" Maximum="30" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged" />
+
+                        <CheckBox x:Name="SmartStopCheck" Style="{StaticResource Switch}" Margin="0,12,0,0" Content="Parada inteligente: terminar antes si ya está todo frío" />
+                        <Grid Margin="48,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="20" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource Label}"><Run Text="CPU por debajo de" /> <Run x:Name="CpuTargetValue" Foreground="{StaticResource Text}" FontWeight="SemiBold" /></TextBlock>
+                                <Slider x:Name="CpuTargetSlider" Style="{StaticResource NeonSlider}" Minimum="30" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Style="{StaticResource Label}"><Run Text="GPU por debajo de" /> <Run x:Name="GpuTargetValue" Foreground="{StaticResource Text}" FontWeight="SemiBold" /></TextBlock>
+                                <Slider x:Name="GpuTargetSlider" Style="{StaticResource NeonSlider}" Minimum="30" Maximum="70" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged" />
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Margin="48,0,0,0">
+                            <TextBlock Style="{StaticResource Label}"><Run Text="Tiempo mínimo antes de poder parar:" /> <Run x:Name="MinSecondsValue" Foreground="{StaticResource Text}" FontWeight="SemiBold" /></TextBlock>
+                            <Slider x:Name="MinSecondsSlider" Style="{StaticResource NeonSlider}" Minimum="30" Maximum="300" TickFrequency="15" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged" />
+                            <TextBlock Style="{StaticResource Hint}" Text="Si no hay sensores disponibles, simplemente se espera el tiempo completo." />
+                        </StackPanel>
+
+                        <CheckBox x:Name="DisplayOffCheck" Style="{StaticResource Switch}" Margin="0,12,0,0" Content="Apagar la pantalla mientras enfría (se enciende al mover el ratón)" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ===================== APAGADO ===================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource H}" Text="🌙 Apagado automático" />
+                        <TextBlock Style="{StaticResource Label}"><Run Text="Cuenta atrás para arrepentirse:" /> <Run x:Name="CountdownValue" Foreground="{StaticResource Text}" FontWeight="SemiBold" /></TextBlock>
+                        <Slider x:Name="CountdownSlider" Style="{StaticResource NeonSlider}" Minimum="10" Maximum="120" TickFrequency="5" IsSnapToTickEnabled="True" ValueChanged="Slider_ValueChanged" />
+                        <CheckBox x:Name="ForceCloseCheck" Style="{StaticResource Switch}" Margin="0,12,0,0"
+                                  Content="Forzar el cierre de programas al apagar" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="48,0,0,0"
+                                   Text="Si un programa tiene cambios sin guardar, Windows puede quedarse esperando y no apagar. Forzándolo se apaga sí o sí (y esos cambios se pierden)." />
+                    </StackPanel>
+                </Border>
+
+                <!-- ===================== EXTRAS ===================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource H}" Text="✨ Extras" />
+                        <CheckBox x:Name="SoundCheck" Style="{StaticResource Switch}" Content="Efectos de sonido" />
+                        <CheckBox x:Name="ReducedCheck" Style="{StaticResource Switch}" Content="Animaciones reducidas (menos partículas, menos fps)" />
+                        <CheckBox x:Name="TrayCheck" Style="{StaticResource Switch}" Content="Al cerrar la ventana, quedarse en la bandeja del sistema" />
+                        <CheckBox x:Name="StartupCheck" Style="{StaticResource Switch}" Content="Iniciar con Windows (minimizado en la bandeja)" />
+                        <CheckBox x:Name="NoUacCheck" Style="{StaticResource Switch}" Content="Abrir sin que Windows pregunte permisos (UAC) cada vez" />
+                        <TextBlock Style="{StaticResource Hint}" Margin="48,0,0,0"
+                                   Text="Ambas opciones crean una tarea programada con permisos elevados, igual que hace FanControl para arrancar con Windows." />
+
+                        <TextBlock Style="{StaticResource Label}" Text="Accesos directos en el escritorio" Margin="0,14,0,6" />
+                        <WrapPanel>
+                            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,8" Click="ShortcutShutdown_Click" Content="🌙  «Enfriar y apagar»" />
+                            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,8" Click="ShortcutCool_Click" Content="❄  «Enfriar ahora»" />
+                            <Button Style="{StaticResource GhostButton}" Margin="0,0,8,8" Click="OpenData_Click" Content="📁  Abrir carpeta de datos y logs" />
+                        </WrapPanel>
+                        <TextBlock x:Name="ExtrasResult" Style="{StaticResource Hint}" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ===================== STATS ===================== -->
+                <Border Style="{StaticResource Card}">
+                    <StackPanel>
+                        <TextBlock Style="{StaticResource H}" Text="🏆 Tus estadísticas" />
+                        <TextBlock x:Name="StatsText" FontSize="13" Foreground="{StaticResource TextDim}" TextWrapping="Wrap" LineHeight="22" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="2" Background="#0A0E1F" BorderBrush="#2B3560" BorderThickness="0,1,0,0" Padding="22,12">
+            <Grid>
+                <TextBlock x:Name="VersionText" VerticalAlignment="Center" FontSize="11" Foreground="{StaticResource TextFaint}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button x:Name="CancelButton" Style="{StaticResource GhostButton}" Content="Cancelar" Click="Cancel_Click" Margin="0,0,10,0" />
+                    <Button x:Name="SaveButton" Style="{StaticResource GhostButton}" Click="Save_Click" Background="{StaticResource NeonGradient}" BorderBrush="Transparent">
+                        <TextBlock Text="Guardar" FontWeight="SemiBold" Foreground="White" />
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

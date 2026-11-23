@@ -1,0 +1,12 @@
+# Compilación
+bin/
+obj/
+*.user
+.vs/
+
+# Exe portable (se regenera con build-installer.ps1; el MSI de dist/ ya lo incluye)
+publish/
+
+# Varios
+*.log
+Thumbs.db
