@@ -1,3 +1,4 @@
+using FanMaxxxing.Core;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -110,7 +111,7 @@ public sealed class TempCard : Border
         {
             _value.Text = "--";
             _valueBrush.Color = Color.FromRgb(0x8D, 0x97, 0xC0);
-            ToolTip = "Sin lectura. Las temperaturas de CPU necesitan permisos de administrador y el driver PawnIO (lo instala FanControl).";
+            ToolTip = Loc.T("card.noreading");
         }
         RedrawSpark();
     }

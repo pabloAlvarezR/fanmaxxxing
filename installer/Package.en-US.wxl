@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="en-US" Codepage="1252" xmlns="http://wixtoolset.org/schemas/v4/wxl">
+  <String Id="LanguageId" Value="1033" />
+  <String Id="LicenseRtf" Value="License.en.rtf" />
+  <String Id="AppDescription" Value="Post-gaming PC cooler: fans to max, then shut down with no residual heat" />
+  <String Id="Downgrade" Value="A newer version of FanMaxxxing is already installed. Uninstall it first if you want to go back." />
+  <String Id="LaunchApp" Value="Open FanMaxxxing now (and let the cold begin)" />
+  <String Id="ShortcutMain" Value="FanMaxxxing" />
+  <String Id="ShortcutCoolOff" Value="Cool down and shut down" />
+  <String Id="ShortcutCoolOffDesktop" Value="Cool down and shut down (FanMaxxxing)" />
+  <String Id="ShortcutCool" Value="Cool down now" />
+  <String Id="ShortcutSim" Value="FanMaxxxing (simulation mode)" />
+  <String Id="ShortcutReadme" Value="FanMaxxxing README" />
+  <String Id="DescCoolOff" Value="Fans at max for a few minutes, then shuts down the PC" />
+  <String Id="DescCool" Value="Fans at max for a few minutes" />
+  <String Id="DescSim" Value="Try the app with fake temperatures, without touching the hardware" />
+</WixLocalization>

@@ -1,137 +1,146 @@
 # FanMaxxxing 🌀❄
 
-**Enfriador post-vicio para Windows 10/11.** Al terminar de jugar pone los ventiladores de CPU y GPU al 100 % unos minutos para sacar el calor residual. Si quieres, después apaga el PC. Viene con memes actuales (FAAAH, 6 7, aura, la peace, frame-mogging…), un ventilador de PC animado con anillo RGB que cambia de color con la temperatura, partículas y rangos.
+[English](README.md) · [Español](README.es.md)
 
-![Enfriando](docs/enfriando.png)
+**A free, open-source post-gaming PC cooler for Windows 10/11.** When you finish playing, it runs your CPU and GPU fans at 100 % for a few minutes to get rid of residual heat, and can then shut down, hibernate or sleep the PC. Your hardware doesn't sit there cooking all night.
 
-## Instalación
+It's also a bit ridiculous on purpose: current memes (FAAAH, 6 7, aura, la peace, frame-mogging…), an animated 120 mm fan whose RGB ring follows your temperatures, snow and wind particles, achievements and ranks.
 
-Copia **`dist\FanMaxxxing-1.1.0-Setup.msi`** al PC (por USB, red o la nube) y ábrelo con doble clic. El asistente está en español y no hace falta instalar .NET ni nada más. Hace esto:
+![Cooling](docs/cooling.png)
 
-- Instala en `C:\Program Files\FanMaxxxing`.
-- **Menú Inicio** › FanMaxxxing: *FanMaxxxing*, *Enfriar y apagar*, *Enfriar ahora*, *FanMaxxxing (modo simulación)* y *Léeme*.
-- **Escritorio**: *FanMaxxxing* y *Enfriar y apagar (FanMaxxxing)*.
-- Aparece en **Configuración › Aplicaciones**, desde donde se desinstala. Al desinstalar se cierra la app si estaba abierta (devolviendo antes los ventiladores a la normalidad) y se borran sus tareas programadas. Tus ajustes y estadísticas se quedan en `%LOCALAPPDATA%\FanMaxxxing`.
-- Para actualizar, instala un MSI más nuevo encima: sustituye al anterior.
+## Download and install
 
-> El instalador no está firmado digitalmente, así que Windows puede decir «Editor desconocido» o, si lo descargas de internet, mostrar SmartScreen («Más información» → «Ejecutar de todas formas»).
+1. Go to **[Releases](https://github.com/pabloAlvarezR/fanmaxxxing/releases/latest)**.
+2. Download the installer in your language: `FanMaxxxing-x.y.z-Setup-en.msi` (English) or `…-es.msi` (Spanish).
+3. Double-click it. Nothing else is needed: .NET is bundled.
 
-Instalación silenciosa, sin accesos en el escritorio:
+The installer:
+- installs to `C:\Program Files\FanMaxxxing`;
+- adds Start menu shortcuts (*FanMaxxxing*, *Cool down and shut down*, *Cool down now*, *Simulation mode*, *README*) and two desktop shortcuts;
+- can be removed from **Settings › Apps**. Uninstalling closes the app if it's running (restoring the fans first) and removes its scheduled tasks. Your settings stay in `%LOCALAPPDATA%\FanMaxxxing`.
+
+The app **checks for updates at startup**. When a new release is published, a notice appears at the bottom with an **Update** button that downloads and installs the new MSI.
+
+> The installer isn't code-signed, so Windows may show "Unknown publisher" or SmartScreen ("More info" → "Run anyway").
+
+Silent install without desktop shortcuts:
 
 ```powershell
-msiexec /i FanMaxxxing-1.1.0-Setup.msi /qb DESKTOPSHORTCUTS=0
+msiexec /i FanMaxxxing-1.2.0-Setup-en.msi /qb DESKTOPSHORTCUTS=0
 ```
 
-También se puede usar sin instalar: `publish\FanMaxxxing.exe` es portable.
+## Usage
 
-## Cómo se usa
+1. Open **FanMaxxxing**, or *Cool down and shut down* to start right away. It asks for administrator rights, like FanControl does. Enable "Open without UAC" in Settings to skip the prompt.
+2. The first time, choose your **language** and whether you want **sound**.
+3. Pick a **duration** (1, 2, 3 or 5 min, or **Custom** from 6 to 30 min) and what to do **when done**: nothing, shut down, hibernate or sleep.
+4. Hit **MAXX IT**. Fans go to 100 %, Windows won't sleep in the middle, and everything returns to auto at the end.
+5. If you chose to shut down, there's a cancellable countdown (30 s by default).
 
-1. Abre **FanMaxxxing** (o *Enfriar y apagar*, que empieza directamente). Pedirá permisos de administrador, igual que FanControl. Para que no pregunte cada vez, activa en Ajustes «Abrir sin que Windows pregunte permisos».
-2. Elige la **duración** (1, 2, 3 o 5 min, o **Personalizado** con un deslizador de 6 a 30 min) y qué hacer **al terminar**: nada, apagar, hibernar o suspender.
-3. Pulsa **MAXXEAR**. Ventiladores al 100 %, el PC no se suspende mientras tanto y al acabar todo vuelve a automático.
-4. Si elegiste apagar, sale una cuenta atrás de 30 s (configurable) con un botón **«¡QUIETO! Sigo despierto»** por si te arrepientes.
+> **First time on your gaming PC:** open ⚙ Settings and click **"🧪 Test for 10 seconds"**. If you hear the take-off, you're set.
 
-> **Primera vez en tu PC gaming:** abre ⚙ Ajustes y pulsa **«🧪 Probar 10 segundos»**. Si oyes el despegue, todo está bien configurado.
+Closing the window asks for confirmation and exits the app completely (no tray icon).
 
-## Cómo controla los ventiladores
+**Languages:** English, Español, Français, Deutsch, Italiano, Português, 简体中文. Each one has its own memes, not literal translations.
 
-### Motor FanControl (recomendado, por defecto si lo tienes)
+## How it controls the fans
 
-Usa el [FanControl de Rem0o](https://github.com/Rem0o/FanControl.Releases) que ya tienes configurado, a través de su línea de comandos oficial (`FanControl.exe -c config.json`, que cambia la config en caliente):
+### FanControl engine (recommended)
 
-1. Lee **tu config normal** de la carpeta `Configurations` de FanControl. En modo «Automática» usa la que FanControl guardó por última vez, o sea, la que tienes activa.
-2. Genera una copia, `FanMaxxxing_MAX.json`, con todos los ventiladores en **manual al 100 %**. El resto de tu config no se toca.
-3. Carga esa copia, espera el tiempo elegido y **vuelve a cargar tu config normal**.
-4. Si FanControl estaba cerrado al empezar, lo vuelve a cerrar al terminar (opcional).
+Uses [FanControl by Rem0o](https://github.com/Rem0o/FanControl.Releases) through its official command line (`FanControl.exe -c config.json`, which switches configs live):
 
-En Ajustes puedes:
-- Desmarcar ventiladores que no quieras al máximo (por ejemplo, una bomba de agua).
-- Usar una config MAX hecha a mano en FanControl en vez de la generada.
+1. Reads **your normal config** from FanControl's `Configurations` folder ("Automatic" = the one FanControl saved last, i.e. your active one).
+2. Generates a copy, `FanMaxxxing_MAX.json`, with every fan set to **manual 100 %**. Nothing else in your config changes.
+3. Loads that copy, waits, then **reloads your normal config**.
+4. If FanControl was closed when it started, it closes it again (optional).
 
-### Motor directo (experimental)
+In Settings you can untick fans you don't want at max (e.g. a pump) or use a MAX config you made by hand.
 
-Para quien no tenga FanControl. Controla los ventiladores de la placa base y de la GPU con [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor), la misma librería que usa FanControl por dentro. Necesita el driver **PawnIO**, que instala FanControl o se descarga de pawnio.eu. No funciona con FanControl abierto, para que no se peleen por los ventiladores.
+### Direct engine (experimental)
 
-### Simulación
+For people without FanControl. Controls motherboard and GPU fans with [LibreHardwareMonitor](https://github.com/LibreHardwareMonitor/LibreHardwareMonitor), the same library FanControl uses internally. Needs the **PawnIO** driver (FanControl installs it, or get it from pawnio.eu) and FanControl closed.
 
-Temperaturas de mentira para ver la app sin tocar hardware: `FanMaxxxing.exe --sim`. En simulación **nunca** se apaga el PC de verdad.
+### Simulation
 
-## Novedades de la 1.1.0
+Fake temperatures to try the app without touching hardware: `FanMaxxxing.exe --sim`. Simulation **never** shuts down the PC.
 
-- Duraciones más realistas: 1, 2, 3 y 5 min, más **Personalizado** (6-30 min). Por defecto, 3 min.
-- Ventilador rediseñado: marco de 120 mm con tornillos, 9 aspas curvadas, brazos del motor, brillo especular, anillo RGB que sigue la temperatura y un display en el buje (temperatura, MAX/RPM, AUTO).
-- Memes actualizados a 2025-2026 y etiquetas flotantes estilo texto de TikTok.
-- La parada inteligente se adapta a enfriamientos cortos.
+## Reliability
 
-## Fiabilidad
+- **Always returns to auto**: restoring happens in a `finally` block, so it runs on cancel, error or exit.
+- **If the app dies mid-cooldown** (crash, killed process, power cut), a marker file lets it restore your FanControl config the next time it opens.
+- **If Windows shuts down mid-cooldown**, it restores your config before exiting.
+- **No memory leaks**: a single render loop that stops when the window is hidden or minimized, a fixed-size particle pool, frozen brushes, LibreHardwareMonitor history disabled, timers stopped and events unhooked on exit. Tested with 28 back-to-back cooldowns: flat managed memory (~3.8 MB) and stable handles and GDI/USER objects.
+- Animations capped at 40 fps (24 in reduced mode), so the UI doesn't heat the GPU you're trying to cool.
+- Rotating log (max 1 MB) in `%LOCALAPPDATA%\FanMaxxxing\log.txt`.
 
-- **Siempre vuelve a automático**: la restauración está en un `finally`, así que pasa aunque canceles, haya un error o cierres la app.
-- **Si la app muere a mitad** (cuelgue, matar el proceso, apagón), deja un marcador en disco. Al volver a abrirla, devuelve FanControl a tu config normal.
-- **Si Windows se apaga a mitad de un enfriamiento**, restaura tu config antes de cerrarse.
-- **Sin fugas de memoria**:
-  - Un único bucle de animación, que se detiene cuando la ventana está oculta o minimizada.
-  - Partículas en un array de tamaño fijo y pinceles congelados.
-  - Historial de LibreHardwareMonitor desactivado (por defecto guarda 24 h por sensor).
-  - Timers parados y eventos desenganchados al salir.
-  - Probado con 28 enfriamientos seguidos: memoria gestionada plana (~3,8 MB), y handles y objetos GDI/USER estables.
-- Animaciones limitadas a 40 fps (24 en modo reducido) para no calentar la GPU que queremos enfriar.
-- Log con rotación (máx. 1 MB) en `%LOCALAPPDATA%\FanMaxxxing\log.txt`.
-
-## Extras
-
-- **Parada inteligente**: si CPU y GPU bajan de 45 °C (configurable) durante 20 s seguidos, termina antes.
-- **Apagar la pantalla** mientras enfría.
-- **Bandeja del sistema**: clic derecho → «Enfriar ahora» o «Enfriar y apagar».
-- **Iniciar con Windows** y **abrir sin UAC**: crean tareas programadas elevadas, como hace FanControl.
-- **Accesos directos en el escritorio** «Enfriar y apagar» y «Enfriar ahora»: un doble clic antes de irte a dormir y listo.
-- **Rangos**: Cooked → Medio cooked → NPC del aire → Locked in → Aura farmer → Frame-mogger térmico → La peace absoluta.
-
-## Línea de comandos
+## Command line
 
 ```
 FanMaxxxing.exe --start --minutes 5 --then shutdown
 ```
 
-| Argumento | Qué hace |
+| Argument | What it does |
 |---|---|
-| `--start` | Empieza a enfriar nada más abrir |
-| `--minutes N` | Duración (1-30) |
-| `--then shutdown\|hibernate\|sleep\|nothing` | Qué hacer al terminar |
-| `--tray` | Arranca minimizado en la bandeja |
-| `--sim` | Modo simulación |
-| `--no-elevate` | No pedir permisos de administrador |
+| `--start` | Start cooling right away |
+| `--minutes N` | Duration (1-30) |
+| `--then shutdown\|hibernate\|sleep\|nothing` | What to do when done |
+| `--sim` | Simulation mode |
+| `--no-elevate` | Don't ask for administrator rights |
 
-Si la app ya está abierta, la nueva instancia le pasa la orden y se cierra.
+If the app is already open, the new instance forwards the command and exits.
 
-## Compilar
+## Fork it, mod it, translate it
 
-Requiere el SDK de .NET 8. WiX 5 (licencia MS-RL) se descarga solo de NuGet. Un único comando publica la app y genera el instalador en `dist\`:
+FanMaxxxing is **MIT-licensed**: fork it and change whatever you want. Pull requests are welcome.
+
+### Build
+
+Requires the **.NET 8 SDK**. WiX 5 (MS-RL license) is pulled from NuGet automatically.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build-installer.ps1
 ```
 
-Para una versión nueva, sube `<Version>` en `src\FanMaxxxing\FanMaxxxing.csproj`: el MSI toma la versión del exe.
+This publishes a self-contained single-file exe to `publish\` and builds `dist\FanMaxxxing-<version>-Setup-en.msi` and `-es.msi`.
 
-En compilación Debug hay opciones extra para pruebas: `--debug-seconds N`, `--debug-loop` y `--snap ruta.png`.
+### Add or improve a language
 
-## Problemas conocidos
+1. Copy `src/FanMaxxxing/Strings/en.json` to `<code>.json`, for example `nl.json`.
+2. Translate `strings`, and write your own `memes`, `tags` and `ranks`. Local memes beat literal translations.
+3. Register the language in `Loc.Languages` (`src/FanMaxxxing/Core/Loc.cs`).
 
-- **«No aparece ningún ventilador»**: tu versión de FanControl guarda la config con otro formato. Crea en FanControl una config con todo en manual al 100 %, guárdala y elígela en Ajustes → «Usar mi propia config MAX».
-- **No se apaga**: algún programa con cambios sin guardar está bloqueando el apagado. Activa «Forzar el cierre de programas» en Ajustes (esos cambios se perderán).
-- **CPU «--»**: la temperatura de la CPU necesita permisos de administrador y el driver PawnIO. Sin ella, el enfriamiento funciona igual por tiempo.
+Missing keys fall back to English.
 
-## Estructura
+### Publish your own releases (and updates)
+
+The update checker reads the **latest GitHub Release** of the repo set in `UpdateChecker.Repo` (`src/FanMaxxxing/Core/UpdateChecker.cs`). In a fork, change it to `your-user/your-repo`. Then for each version:
+
+1. Bump `<Version>` in `src/FanMaxxxing/FanMaxxxing.csproj`.
+2. Run `build-installer.ps1`.
+3. Create a Release tagged `vX.Y.Z` and attach the `.msi` files. Keep the `-en.msi` / `-es.msi` suffix: the app picks the one matching its language and falls back to English.
+
+The update check only works if the repository is **public**.
+
+### Project layout
 
 ```
 src/FanMaxxxing/
-  Core/   lógica: motores (FanControl, directo, simulación), enfriamiento, sensores, apagado, ajustes, log
-  UI/     ventilador animado, partículas, texto de meme, tarjetas, bandeja
-  MainWindow / SettingsWindow / App / Program (Main propio)
-installer/                proyecto WiX del MSI (Package.wxs, textos en español, licencia, imágenes)
-build-installer.ps1       publica la app y genera el MSI
-publish/FanMaxxxing.exe   ejecutable portable (autocontenido, ~65 MB)
-dist/                     instalador MSI listo para copiar
+  Core/      engines (FanControl, direct, simulation), cooldown, sensors, power, settings, updates, i18n
+  UI/        animated fan, particles, meme text, temperature cards
+  Strings/   language files (en, es, fr, de, it, pt, zh)
+  MainWindow / SettingsWindow / FirstRunWindow / App / Program
+installer/   WiX project for the MSI (en-US and es-ES)
+docs/        screenshots
 ```
 
-FanControl es software de Rémi Mercier (código cerrado, uso personal). FanMaxxxing solo usa su línea de comandos pública. LibreHardwareMonitor tiene licencia MPL-2.0.
+Debug builds have extra testing options: `--debug-seconds N`, `--debug-loop` (memory/handle stress test) and `--snap file.png`.
+
+## Known issues
+
+- **"No fans found"**: your FanControl version stores its config differently. Create a config in FanControl with every fan at manual 100 %, save it, and select it in Settings → "Use my own MAX config".
+- **The PC doesn't shut down**: an app with unsaved changes is blocking it. Enable "Force apps to close" in Settings (those changes will be lost).
+- **CPU shows "--"**: CPU temperature needs administrator rights and the PawnIO driver. Without it, cooling still works on a timer.
+
+## License
+
+[MIT](LICENSE). FanControl is closed-source software by Rémi Mercier and is **not** included; FanMaxxxing only calls its public command line. LibreHardwareMonitor is MPL-2.0.

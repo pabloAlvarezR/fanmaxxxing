@@ -44,28 +44,28 @@ public sealed class FanControlBackend : IFanBackend
     {
         var exe = FanControlLocator.FindExe(_settings.FanControlExePath);
         if (exe == null)
-            return new(false, "FanControl no encontrado",
-                "No encuentro FanControl.exe. Indícalo en Ajustes o elige otro motor.");
+            return new(false, Loc.T("be.fc.notfound.title"),
+                Loc.T("be.fc.notfound.text"));
 
         var normal = FanControlLocator.ResolveNormalConfig(exe, _settings.NormalConfigPath);
         if (normal == null)
-            return new(false, "Sin configuración de FanControl",
-                "No hay ninguna config en la carpeta Configurations. Abre FanControl, configura tus ventiladores y guarda.");
+            return new(false, Loc.T("be.fc.noconfig.title"),
+                Loc.T("be.fc.noconfig.text"));
 
         if (_settings.UseCustomMaxConfig && !File.Exists(_settings.CustomMaxConfigPath))
-            return new(false, "Falta tu config MAX", "Has marcado usar una config MAX propia, pero el archivo no existe.");
+            return new(false, Loc.T("be.fc.nomax.title"), Loc.T("be.fc.nomax.text"));
 
         bool running = FanControlLocator.IsRunning();
-        return new(true, running ? "FanControl conectado" : "FanControl listo (se abrirá solo)",
-            $"Config normal: {Path.GetFileName(normal)}");
+        return new(true, running ? Loc.T("be.fc.connected") : Loc.T("be.fc.ready"),
+            Loc.F("be.fc.normal", Path.GetFileName(normal)));
     }
 
     public async Task BoostAsync(CancellationToken ct)
     {
         _exe = FanControlLocator.FindExe(_settings.FanControlExePath)
-               ?? throw new FriendlyException("No encuentro FanControl.exe. Configúralo en Ajustes.");
+               ?? throw new FriendlyException(Loc.T("be.fc.notfound.text"));
         _normalConfig = FanControlLocator.ResolveNormalConfig(_exe, _settings.NormalConfigPath)
-                        ?? throw new FriendlyException("No encuentro tu configuración normal de FanControl.");
+                        ?? throw new FriendlyException(Loc.T("be.fc.noconfig.text"));
 
         string maxConfig = _settings.UseCustomMaxConfig && File.Exists(_settings.CustomMaxConfigPath)
             ? _settings.CustomMaxConfigPath!
@@ -94,7 +94,7 @@ public sealed class FanControlBackend : IFanBackend
         }
         catch (Exception ex)
         {
-            throw new FriendlyException($"No puedo leer tu config de FanControl ({Path.GetFileName(normalConfig)}): {ex.Message}");
+            throw new FriendlyException(Loc.F("be.fc.read", Path.GetFileName(normalConfig), ex.Message));
         }
 
         string maxJson;
@@ -105,14 +105,14 @@ public sealed class FanControlBackend : IFanBackend
         }
         catch (Exception ex)
         {
-            throw new FriendlyException($"Tu config de FanControl no se puede interpretar: {ex.Message}");
+            throw new FriendlyException(Loc.F("be.fc.parse", ex.Message));
         }
 
         if (total == 0)
-            throw new FriendlyException("En tu config de FanControl no aparece ningún ventilador controlable. " +
-                                        "Crea una config MAX a mano en FanControl y selecciónala en Ajustes.");
+            throw new FriendlyException(Loc.T("be.fc.nofans"));
+
         if (boosted == 0)
-            throw new FriendlyException("Has excluido todos los ventiladores en Ajustes. Así no enfriamos nada, crack.");
+            throw new FriendlyException(Loc.T("be.fc.allexcluded"));
 
         // Preferimos dejarla junto a las demás configs de FanControl; si no hay permisos, en nuestra carpeta.
         string target = Path.Combine(Path.GetDirectoryName(normalConfig)!, FanControlConfigTool.MaxFileName);
@@ -190,12 +190,12 @@ public sealed class FanControlBackend : IFanBackend
             }
             catch (Win32Exception ex2) when (ex2.NativeErrorCode == 1223)
             {
-                throw new FriendlyException("Has cancelado el permiso de administrador que pide FanControl.");
+                throw new FriendlyException(Loc.T("be.fc.uac"));
             }
         }
         catch (Exception ex)
         {
-            throw new FriendlyException($"No he podido lanzar FanControl: {ex.Message}");
+            throw new FriendlyException(Loc.F("be.fc.launch", ex.Message));
         }
 
         using (p)
@@ -236,24 +236,24 @@ public sealed class DirectBackend : IFanBackend
     }
 
     public BackendKind Kind => BackendKind.Direct;
-    public string Name => "Control directo";
+    public string Name => Loc.T("be.direct.name");
 
     public BackendStatus GetStatus()
     {
         if (FanControlLocator.IsRunning())
-            return new(false, "FanControl está abierto",
-                "El control directo se pelearía con FanControl. Usa el motor FanControl o ciérralo.");
+            return new(false, Loc.T("be.direct.fcopen.title"),
+                Loc.T("be.direct.fcopen.text"));
         if (!Elevation.IsAdmin)
-            return new(false, "Faltan permisos", "El control directo necesita ejecutar FanMaxxxing como administrador.");
+            return new(false, Loc.T("be.direct.admin.title"), Loc.T("be.direct.admin.text"));
         if (!_hw.WaitOpenedAsync().IsCompleted)
-            return new(true, "Control directo (detectando…)", "Buscando ventiladores…");
+            return new(true, Loc.T("be.direct.detecting.title"), Loc.T("be.direct.detecting.text"));
         int n = _hw.ControlList.Count;
         if (n == 0)
-            return new(false, "Sin ventiladores controlables",
+            return new(false, Loc.T("be.direct.nofans.title"),
                 HardwareService.PawnIoInstalled()
-                    ? "LibreHardwareMonitor no encuentra ventiladores que se puedan controlar en este equipo."
-                    : "No está instalado el driver PawnIO (lo instala FanControl, o descárgalo de pawnio.eu).");
-        return new(true, "Control directo (experimental)", $"{n} ventiladores controlables detectados");
+                    ? Loc.T("be.direct.nofans.text")
+                    : Loc.T("be.direct.nopawnio"));
+        return new(true, Loc.T("be.direct.ok.title"), Loc.F("be.direct.ok.text", n));
     }
 
     public async Task BoostAsync(CancellationToken ct)
@@ -264,7 +264,7 @@ public sealed class DirectBackend : IFanBackend
         RecoveryMarker.Write(new RecoveryMarker { Backend = BackendKind.Direct });
         _boostAttempted = true;
         int n = await _hw.SetBoostAsync(true).WaitAsync(ct).ConfigureAwait(true);
-        if (n == 0) throw new FriendlyException("No se pudo poner ningún ventilador al máximo.");
+        if (n == 0) throw new FriendlyException(Loc.T("be.direct.none"));
         Log.Info($"Control directo: {n} ventiladores al 100 %");
     }
 
@@ -297,9 +297,9 @@ public sealed class SimulationBackend : IFanBackend
     public SimulationBackend(SimulatedSensors sim) => _sim = sim;
 
     public BackendKind Kind => BackendKind.Simulation;
-    public string Name => "Simulación";
+    public string Name => Loc.T("be.sim.name");
 
-    public BackendStatus GetStatus() => new(true, "Modo simulación", "No se toca ningún ventilador de verdad.");
+    public BackendStatus GetStatus() => new(true, Loc.T("be.sim.title"), Loc.T("be.sim.text"));
 
     public async Task BoostAsync(CancellationToken ct)
     {

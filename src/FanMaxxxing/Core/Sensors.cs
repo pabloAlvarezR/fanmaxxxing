@@ -47,7 +47,7 @@ public sealed class HardwareService : ISensorSource
     private DateTime _lastBoostApply;
     private volatile bool _disposed;
     private volatile SensorSnapshot _latest = SensorSnapshot.Empty;
-    private volatile string _status = "Arrancando sensores…";
+    private volatile string _status = Loc.T("sensors.starting");
     private volatile IReadOnlyCollection<string> _excluded = Array.Empty<string>();
 
     public HardwareService(bool withMotherboard)
@@ -89,15 +89,23 @@ public sealed class HardwareService : ISensorSource
         _thread.Start();
     }
 
+    /// <summary>
+    /// LibreHardwareMonitor tiene estado global (driver PawnIO, mutex del bus ISA): abrir un Computer
+    /// mientras otro se está cerrando lo rompe. Serializamos aperturas y cierres entre instancias.
+    /// </summary>
+    private static readonly SemaphoreSlim Lifecycle = new(1, 1);
+
     private void Loop()
     {
         try
         {
-            Open();
+            Lifecycle.Wait();
+            try { Open(); }
+            finally { Lifecycle.Release(); }
         }
         catch (Exception ex)
         {
-            _status = "Sin sensores: " + ex.Message;
+            _status = Loc.T("sensors.none") + " " + ex.Message;
             Log.Error("No se pudo abrir LibreHardwareMonitor", ex);
         }
         finally
@@ -235,8 +243,8 @@ public sealed class HardwareService : ISensorSource
         var parts = new List<string>();
         parts.Add(_cpuTemp != null ? "CPU ✓" : "CPU ✗");
         parts.Add(_gpuTemp != null ? "GPU ✓" : "GPU ✗");
-        if (_withMotherboard) parts.Add($"{_controls.Count} ventiladores controlables");
-        _status = "Sensores: " + string.Join(" · ", parts);
+        if (_withMotherboard) parts.Add(Loc.F("sensors.controls", _controls.Count));
+        _status = Loc.T("sensors.label") + " " + string.Join(" · ", parts);
         Log.Info($"LHM abierto. {_status}. CPU={_cpuTemp?.Hardware.Name}/{_cpuTemp?.Name} GPU={_gpuTemp?.Hardware.Name}/{_gpuTemp?.Name} PawnIO={PawnIoInstalled()}");
     }
 
@@ -340,8 +348,10 @@ public sealed class HardwareService : ISensorSource
                 _boosted = false;
             }
             catch (Exception ex) { Log.Error("Error devolviendo los ventiladores a automático", ex); }
+            bool gotLock = Lifecycle.Wait(TimeSpan.FromSeconds(15));
             try { _computer?.Close(); }
             catch (Exception ex) { Log.Error("Error cerrando LibreHardwareMonitor", ex); }
+            finally { if (gotLock) Lifecycle.Release(); }
             _computer = null;
             _watched.Clear();
             _fans.Clear();
@@ -366,7 +376,7 @@ public sealed class SimulatedSensors : ISensorSource
 
     public event Action<SensorSnapshot>? Updated;
     public SensorSnapshot Latest => _latest;
-    public string Status => "Modo simulación (temperaturas de mentira)";
+    public string Status => Loc.T("sensors.sim");
 
     public bool Boosting
     {

@@ -1,14 +1,13 @@
-﻿using System.Windows;
+﻿using System.Diagnostics;
+using System.Windows;
 using System.Windows.Threading;
 using FanMaxxxing.Core;
-using FanMaxxxing.UI;
 
 namespace FanMaxxxing;
 
 public partial class App : Application
 {
     private SingleInstance? _single;
-    private TrayIcon? _tray;
     private MainWindow? _main;
     private bool _exiting;
     private int _fatalHandled;
@@ -17,7 +16,6 @@ public partial class App : Application
     public SoundFx Sound { get; private set; } = new();
     public ISensorSource Sensors { get; private set; } = null!;
     public bool ForceSimulation { get; private set; }
-    public bool HasTray => _tray != null;
 
     private HardwareService? Hardware => Sensors as HardwareService;
     private SimulatedSensors? Sim => Sensors as SimulatedSensors;
@@ -37,10 +35,10 @@ public partial class App : Application
             args = WindowsIntegration.TakePendingArgs().ToList();
             opts = LaunchOptions.Parse(args);
         }
-        Log.Info($"=== Arranque v{typeof(App).Assembly.GetName().Version} · admin={Elevation.IsAdmin} · args=[{string.Join(' ', args)}] ===");
+        Log.Info($"=== Arranque v{UpdateChecker.CurrentVersion} · admin={Elevation.IsAdmin} · args=[{string.Join(' ', args)}] ===");
 
         // 1) ¿Ya hay una abierta? Le pasamos la orden y nos vamos.
-        if (SingleInstance.AnotherInstanceExists() && SingleInstance.SendToExisting(args))
+        if (!opts.Restarted && SingleInstance.AnotherInstanceExists() && SingleInstance.SendToExisting(args))
         {
             Shutdown();
             return;
@@ -63,9 +61,9 @@ public partial class App : Application
             Log.Warn($"Sin elevación ({r}); seguimos con permisos limitados");
         }
 
-        // 3) Instancia única
+        // 3) Instancia única (tras un reinicio por cambio de idioma, esperamos a que la anterior suelte el mutex)
         _single = new SingleInstance();
-        if (!_single.TryAcquire())
+        if (!_single.TryAcquire(opts.Restarted ? TimeSpan.FromSeconds(10) : TimeSpan.Zero))
         {
             SingleInstance.SendToExisting(args);
             Shutdown();
@@ -73,31 +71,71 @@ public partial class App : Application
         }
         _single.StartServer(a => Dispatcher.BeginInvoke(() => OnRemoteArgs(a)));
 
-        // 4) Estado
+        // 4) Estado e idioma
         Settings = SettingsStore.Load();
         ForceSimulation = opts.Simulation;
+        Loc.Init(Settings.Language);
+
+#if DEBUG
+        if (opts.SnapFirstRun && opts.SnapPath is string fr)
+        {
+            var w = new FirstRunWindow(Settings);
+            w.Show();
+            var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(opts.SnapDelay) };
+            t.Tick += (_, _) =>
+            {
+                t.Stop();
+                var root = (FrameworkElement)w.Content;
+                var dpi = System.Windows.Media.VisualTreeHelper.GetDpi(w);
+                var bmp = new System.Windows.Media.Imaging.RenderTargetBitmap((int)(root.ActualWidth * dpi.DpiScaleX), (int)(root.ActualHeight * dpi.DpiScaleY),
+                    dpi.PixelsPerInchX, dpi.PixelsPerInchY, System.Windows.Media.PixelFormats.Pbgra32);
+                bmp.Render(root);
+                var enc = new System.Windows.Media.Imaging.PngBitmapEncoder();
+                enc.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bmp));
+                using (var fs = System.IO.File.Create(fr)) enc.Save(fs);
+                Shutdown();
+            };
+            t.Start();
+            return;
+        }
+#endif
+
+        // 5) Primera vez: idioma y sonido (solo una vez en la vida)
+        if (!Settings.SetupDone)
+        {
+            var welcome = new FirstRunWindow(Settings);
+            welcome.ShowDialog();
+            Settings.SetupDone = true;
+            SaveSettings();
+            Loc.Init(Settings.Language);
+        }
+
         Sound.Enabled = Settings.SoundEnabled;
         ReconfigureSensors();
         SessionEnding += OnSessionEnding;
+        if (Elevation.IsAdmin) Task.Run(RemoveLegacyStartupTask);
 
-        try
-        {
-            _tray = new TrayIcon(this);
-        }
-        catch (Exception ex)
-        {
-            Log.Error("No se pudo crear el icono de la bandeja", ex);
-            _tray = null;
-        }
-
-        // 5) Ventana
+        // 6) Ventana
         _main = new MainWindow(this);
         MainWindow = _main;
-        bool startHidden = opts.Tray && !opts.StartNow && _tray != null;
-        if (!startHidden) _main.Show();
+        _main.Show();
         _main.HandleLaunch(opts);
 
         _ = RecoverIfNeededAsync();
+    }
+
+    /// <summary>La versión 1.1 podía arrancar con Windows; esa opción ya no existe, así que limpiamos su tarea.</summary>
+    private static void RemoveLegacyStartupTask()
+    {
+        try
+        {
+            if (WindowsIntegration.TaskExists(WindowsIntegration.StartupTask))
+            {
+                WindowsIntegration.DeleteTask(WindowsIntegration.StartupTask);
+                Log.Info("Tarea antigua de inicio con Windows eliminada");
+            }
+        }
+        catch (Exception ex) { Log.Warn("No se pudo borrar la tarea de inicio antigua: " + ex.Message); }
     }
 
     private void OnRemoteArgs(string[] args)
@@ -105,7 +143,7 @@ public partial class App : Application
         if (_exiting || _main == null) return;
         var o = LaunchOptions.Parse(args);
         Log.Info($"Orden recibida de otra instancia: [{string.Join(' ', args)}]");
-        if (!o.Tray || o.StartNow) _main.ShowFromTray();
+        _main.BringToFront();
         _main.HandleLaunch(o);
     }
 
@@ -130,15 +168,20 @@ public partial class App : Application
         if (ok) return;
 
         ISensorSource fresh = wantSim ? new SimulatedSensors() : new HardwareService(wantBoard);
-        fresh.Start();
         Sensors = fresh;
-        if (current != null)
+        if (current == null)
         {
-            // Cerrar LibreHardwareMonitor puede tardar un poco: fuera del hilo de UI.
+            fresh.Start();
+        }
+        else
+        {
+            // Primero se cierra el antiguo y luego se abre el nuevo (LibreHardwareMonitor comparte estado global).
+            // Cerrar puede tardar un poco: fuera del hilo de UI.
             Task.Run(() =>
             {
                 try { current.Dispose(); }
                 catch (Exception ex) { Log.Error("Error cerrando sensores", ex); }
+                fresh.Start();
             });
         }
         Log.Info($"Sensores: {(wantSim ? "simulados" : wantBoard ? "LHM + placa" : "LHM")}");
@@ -200,50 +243,18 @@ public partial class App : Application
                     RecoveryMarker.Delete();
                     break;
             }
-            _main?.ShowToast("🩹", "Recuperado de un cierre inesperado",
-                "La última vez me cerré a mitad de enfriamiento. Ya he dejado los ventiladores en su modo normal.",
-                TimeSpan.FromSeconds(9));
+            _main?.ShowToast("🩹", Loc.T("toast.recovered.title"), Loc.T("toast.recovered.text"), TimeSpan.FromSeconds(9));
         }
         catch (Exception ex)
         {
             Log.Error("Fallo en la recuperación", ex);
-            _main?.ShowToast("⚠", "No he podido restaurar", "Revisa FanControl y carga tu config normal a mano. " + ex.Message,
+            _main?.ShowToast("⚠", Loc.T("toast.recoverfail.title"), Loc.T("toast.recoverfail.text") + " " + ex.Message,
                 TimeSpan.FromSeconds(12), error: true);
         }
     }
 
     // =====================================================================
-    //  Bandeja
-    // =====================================================================
-
-    public void ShowMain() => _main?.ShowFromTray();
-
-    public void ShowTrayBalloon(string title, string text) => _tray?.Balloon(title, text);
-
-    public void ShowTrayBalloonIfHidden(Window w, string title, string text)
-    {
-        if (!w.IsVisible || w.WindowState == WindowState.Minimized) _tray?.Balloon(title, text);
-    }
-
-    public void SetTrayTooltip(string text) => _tray?.SetTooltip(text);
-
-    public bool IsCooling => _main?.IsCooling == true;
-
-    public void StartFromTray(AfterAction? after)
-    {
-        _main?.StartFromTray(after);
-    }
-
-    public void CancelFromTray() => _main?.CancelCooldown();
-
-    public void RequestExit()
-    {
-        if (_main != null) _ = _main.RequestExitAsync();
-        else ExitApp();
-    }
-
-    // =====================================================================
-    //  Salida y errores
+    //  Salida, reinicio y errores
     // =====================================================================
 
     /// <summary>Cierre ordenado: todo lo que tiene recursos nativos se libera aquí.</summary>
@@ -266,10 +277,29 @@ public partial class App : Application
         Shutdown();
     }
 
+    /// <summary>Reinicia la app (para aplicar un idioma nuevo).</summary>
+    public void Restart()
+    {
+        try
+        {
+            var psi = new ProcessStartInfo(AppPaths.ExePath) { UseShellExecute = false, WorkingDirectory = AppContext.BaseDirectory };
+            psi.ArgumentList.Add("--restarted");
+            psi.ArgumentList.Add("--no-elevate");
+            if (ForceSimulation) psi.ArgumentList.Add("--sim");
+            // Soltamos el mutex antes, para que la nueva instancia pueda quedárselo.
+            _single?.Dispose();
+            _single = null;
+            Process.Start(psi)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            Log.Error("No se pudo reiniciar", ex);
+        }
+        ExitApp();
+    }
+
     protected override void OnExit(ExitEventArgs e)
     {
-        try { _tray?.Dispose(); } catch { /* ignorar */ }
-        _tray = null;
         try { Sensors?.Dispose(); } catch (Exception ex) { Log.Error("Error cerrando sensores", ex); }
         try { Sound.Dispose(); } catch { /* ignorar */ }
         try { _single?.Dispose(); } catch { /* ignorar */ }
@@ -280,14 +310,12 @@ public partial class App : Application
 
     private void OnSessionEnding(object sender, SessionEndingCancelEventArgs e)
     {
-        // Windows se apaga o cierra sesión. Si estábamos enfriando, dejamos FanControl en su config normal YA.
+        // Windows se apaga o cierra sesión (o el instalador nos pide salir). Si estábamos enfriando, restauramos YA.
         Log.Info($"Fin de sesión de Windows ({e.ReasonSessionEnding})");
         try
         {
             _main?.MarkSessionEnding();
             if (_main?.IsCooling == true) _main.EmergencyRestore();
-            _tray?.Dispose();
-            _tray = null;
         }
         catch (Exception ex) { Log.Error("Error en SessionEnding", ex); }
     }
@@ -298,7 +326,7 @@ public partial class App : Application
         e.Handled = true; // seguimos vivos: los ventiladores no se pueden quedar a lo loco
         try
         {
-            _main?.ShowToast("💥", "Algo ha petado (pero sigo vivo)", e.Exception.Message, TimeSpan.FromSeconds(10), error: true);
+            _main?.ShowToast("💥", Loc.T("toast.crash.title"), e.Exception.Message, TimeSpan.FromSeconds(10), error: true);
         }
         catch { /* ignorar */ }
     }
@@ -308,7 +336,6 @@ public partial class App : Application
         if (Interlocked.Exchange(ref _fatalHandled, 1) == 1) return;
         Log.Error("Excepción fatal", e.ExceptionObject as Exception);
         try { _main?.EmergencyRestore(); } catch { /* ignorar */ }
-        try { _tray?.Dispose(); } catch { /* ignorar */ }
     }
 
     private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)

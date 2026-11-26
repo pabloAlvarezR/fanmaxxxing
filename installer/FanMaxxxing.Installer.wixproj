@@ -6,7 +6,7 @@
   <PropertyGroup>
     <OutputName>FanMaxxxing-Setup</OutputName>
     <InstallerPlatform>x64</InstallerPlatform>
-    <Cultures>es-ES</Cultures>
+    <Cultures>en-US;es-ES</Cultures>
     <AppPublishDir Condition="'$(AppPublishDir)' == ''">$(MSBuildThisFileDirectory)..\publish</AppPublishDir>
     <DefineConstants>PublishDir=$(AppPublishDir);RepoDir=$(MSBuildThisFileDirectory)..</DefineConstants>
   </PropertyGroup>

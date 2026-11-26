@@ -31,10 +31,10 @@ public static class PowerActions
 
     public static string Describe(AfterAction a) => a switch
     {
-        AfterAction.Shutdown => "apagar",
-        AfterAction.Hibernate => "hibernar",
-        AfterAction.Sleep => "suspender",
-        _ => "nada",
+        AfterAction.Shutdown => Loc.T("verb.shutdown"),
+        AfterAction.Hibernate => Loc.T("verb.hibernate"),
+        AfterAction.Sleep => Loc.T("verb.sleep"),
+        _ => Loc.T("verb.nothing"),
     };
 
     /// <summary>Ejecuta la acción de energía. Devuelve null si ha ido bien o un mensaje de error.</summary>
@@ -51,7 +51,7 @@ public static class PowerActions
                     return RunShutdownExe("/h");
                 case AfterAction.Sleep:
                     if (!Native.SetSuspendState(false, false, false))
-                        return "Windows no ha querido suspenderse (¿lo bloquea alguna app?).";
+                        return Loc.T("power.sleepfail");
                     return null;
                 default:
                     return null;

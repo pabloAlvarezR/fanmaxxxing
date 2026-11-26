@@ -52,22 +52,26 @@ public sealed class SingleInstance : IDisposable
         }
     }
 
-    public bool TryAcquire()
+    /// <summary>Intenta ser la instancia principal; si se indica, reintenta durante <paramref name="wait"/>.</summary>
+    public bool TryAcquire(TimeSpan wait)
     {
-        try
+        var deadline = DateTime.UtcNow + wait;
+        while (true)
         {
-            _mutex = new Mutex(true, MutexName, out bool createdNew);
-            _owned = createdNew;
-            if (!createdNew)
+            try
             {
+                _mutex = new Mutex(true, MutexName, out bool createdNew);
+                _owned = createdNew;
+                if (createdNew) return true;
                 _mutex.Dispose();
                 _mutex = null;
             }
-            return createdNew;
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return false;
+            catch (UnauthorizedAccessException)
+            {
+                // existe y es de otra instancia elevada
+            }
+            if (DateTime.UtcNow >= deadline) return false;
+            Thread.Sleep(200);
         }
     }
 

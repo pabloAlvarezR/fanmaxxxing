@@ -8,7 +8,7 @@
            Version="!(bind.FileVersion.MainExe)"
            UpgradeCode="4446F73C-9118-41D5-A2E8-8C86B933E8C7"
            Scope="perMachine"
-           Language="3082"
+           Language="!(loc.LanguageId)"
            Codepage="1252"
            Compressed="yes">
 
@@ -25,7 +25,7 @@
     <Property Id="ARPNOREPAIR" Value="yes" />
 
     <!-- Interfaz: bienvenida → licencia → carpeta → instalar → fin (con "abrir ahora") -->
-    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <WixVariable Id="WixUILicenseRtf" Value="!(loc.LicenseRtf)" />
     <WixVariable Id="WixUIBannerBmp" Value="assets\banner.bmp" />
     <WixVariable Id="WixUIDialogBmp" Value="assets\dialog.bmp" />
     <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="!(loc.LaunchApp)" />
@@ -77,7 +77,7 @@
         <File Id="MainExe" Source="$(PublishDir)\FanMaxxxing.exe" KeyPath="yes" />
       </Component>
       <Component Id="ReadmeComponent">
-        <File Id="Readme" Source="$(RepoDir)\README.md" Name="LEEME.md" KeyPath="yes" />
+        <File Id="Readme" Source="$(RepoDir)\README.md" Name="README.md" KeyPath="yes" />
       </Component>
     </ComponentGroup>
 
@@ -90,7 +90,7 @@
                 Target="[INSTALLFOLDER]FanMaxxxing.exe" Arguments="--start --then nothing" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
       <Shortcut Id="MenuSim" Name="!(loc.ShortcutSim)" Description="!(loc.DescSim)"
                 Target="[INSTALLFOLDER]FanMaxxxing.exe" Arguments="--sim" WorkingDirectory="INSTALLFOLDER" Icon="AppIcon" />
-      <Shortcut Id="MenuReadme" Name="!(loc.ShortcutReadme)" Target="[INSTALLFOLDER]LEEME.md" />
+      <Shortcut Id="MenuReadme" Name="!(loc.ShortcutReadme)" Target="[INSTALLFOLDER]README.md" />
       <RemoveFolder Id="RemoveAppMenuFolder" On="uninstall" />
       <RegistryValue Root="HKCU" Key="Software\FanMaxxxing\Installer" Name="MenuShortcuts" Type="integer" Value="1" KeyPath="yes" />
     </Component>

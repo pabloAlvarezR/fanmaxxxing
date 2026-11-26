@@ -154,7 +154,7 @@ public sealed class CooldownEngine
             catch (Exception ex)
             {
                 restoreError = ex is TimeoutException
-                    ? "FanControl no ha respondido a tiempo al volver a la config normal."
+                    ? Loc.T("engine.restoretimeout")
                     : ex.Message;
                 Log.Error("No se pudo restaurar el modo normal", ex);
             }

@@ -60,8 +60,11 @@ public sealed class AppSettings
     // --- Extras ---
     public bool SoundEnabled { get; set; } = true;
     public bool ReducedAnimations { get; set; }
-    public bool CloseToTray { get; set; } = true;
-    public bool FirstRunDone { get; set; }
+    /// <summary>Código de idioma (en, es, fr…) o null = el de Windows.</summary>
+    public string? Language { get; set; }
+    public bool CheckUpdates { get; set; } = true;
+    /// <summary>La ventana de bienvenida (idioma + sonido) ya se mostró.</summary>
+    public bool SetupDone { get; set; }
 
     public Stats Stats { get; set; } = new();
 

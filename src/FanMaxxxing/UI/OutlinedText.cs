@@ -15,7 +15,7 @@ public sealed class OutlinedText : FrameworkElement
         nameof(FontSize), typeof(double), typeof(OutlinedText),
         new FrameworkPropertyMetadata(34.0, FrameworkPropertyMetadataOptions.AffectsMeasure | FrameworkPropertyMetadataOptions.AffectsRender, (d, _) => ((OutlinedText)d)._geometry = null));
 
-    private static readonly Typeface Face = new(new FontFamily("Impact, Arial Black"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+    private static readonly Typeface Face = new(new FontFamily("Impact, Arial Black, Microsoft YaHei UI"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
     private static readonly Brush FillBrush = Frozen(Brushes.White);
     private static readonly Pen OutlinePen = MakePen();
 

@@ -34,9 +34,9 @@
                 <GradientStop Color="#FF2E88" Offset="1" />
             </LinearGradientBrush>
 
-            <FontFamily x:Key="NumFont">Bahnschrift, Segoe UI</FontFamily>
-            <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI</FontFamily>
-            <FontFamily x:Key="MemeFont">Impact, Arial Black</FontFamily>
+            <FontFamily x:Key="NumFont">Bahnschrift, Segoe UI, Microsoft YaHei UI</FontFamily>
+            <FontFamily x:Key="UiFont">Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI</FontFamily>
+            <FontFamily x:Key="MemeFont">Impact, Arial Black, Microsoft YaHei UI</FontFamily>
             <FontFamily x:Key="IconFont">Segoe Fluent Icons, Segoe MDL2 Assets</FontFamily>
 
             <!-- ===== Botones de la barra de título ===== -->

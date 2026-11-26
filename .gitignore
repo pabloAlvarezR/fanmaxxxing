@@ -10,3 +10,6 @@ publish/
 # Varios
 *.log
 Thumbs.db
+
+# Instaladores: se publican como GitHub Releases, no en el repo
+dist/

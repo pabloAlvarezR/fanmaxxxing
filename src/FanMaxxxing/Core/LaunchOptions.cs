@@ -5,7 +5,6 @@ namespace FanMaxxxing.Core;
 ///   --start                 empieza a enfriar nada más abrir
 ///   --minutes N             duración (1-30)
 ///   --then shutdown|hibernate|sleep|nothing
-///   --tray                  arranca minimizado en la bandeja
 ///   --sim                   modo simulación (no toca hardware)
 ///   --no-elevate            no pedir permisos de administrador
 /// </summary>
@@ -14,7 +13,8 @@ public sealed class LaunchOptions
     public bool StartNow { get; set; }
     public int? Minutes { get; set; }
     public AfterAction? Then { get; set; }
-    public bool Tray { get; set; }
+    /// <summary>Interno: la app se ha reiniciado a sí misma (cambio de idioma).</summary>
+    public bool Restarted { get; set; }
     public bool Simulation { get; set; }
     public bool NoElevate { get; set; }
     public bool FromTask { get; set; }
@@ -28,6 +28,12 @@ public sealed class LaunchOptions
 
     /// <summary>Solo depuración: encadena enfriamientos sin fin y registra memoria/handles (busca fugas).</summary>
     public bool DebugLoop { get; set; }
+
+    /// <summary>Solo depuración: captura la ventana de bienvenida.</summary>
+    public bool SnapFirstRun { get; set; }
+
+    /// <summary>Solo depuración: muestra el diálogo de cerrar antes de la captura.</summary>
+    public bool SnapConfirm { get; set; }
 
     /// <summary>Solo depuración: la captura es de la ventana de Ajustes.</summary>
     public bool SnapSettings { get; set; }
@@ -62,7 +68,9 @@ public sealed class LaunchOptions
                     };
                     break;
                 case "--tray":
-                    o.Tray = true;
+                    break; // obsoleto (la bandeja ya no existe): se ignora
+                case "--restarted":
+                    o.Restarted = true;
                     break;
                 case "--sim":
                 case "--simulation":
@@ -84,6 +92,15 @@ public sealed class LaunchOptions
                     break;
                 case "--debug-loop":
                     o.DebugLoop = true;
+                    break;
+                case "--update-repo":
+                    UpdateChecker.Repo = NextValue() ?? UpdateChecker.DefaultRepo;
+                    break;
+                case "--snap-firstrun":
+                    o.SnapFirstRun = true;
+                    break;
+                case "--snap-confirm":
+                    o.SnapConfirm = true;
                     break;
                 case "--snap-settings":
                     o.SnapSettings = true;
@@ -114,7 +131,6 @@ public sealed class LaunchOptions
                 _ => "nothing",
             });
         }
-        if (Tray) list.Add("--tray");
         if (Simulation) list.Add("--sim");
         if (NoElevate) list.Add("--no-elevate");
         return list;

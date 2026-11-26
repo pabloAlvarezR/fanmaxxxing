@@ -16,12 +16,15 @@ public partial class SettingsWindow : Window
     private readonly List<(string Id, CheckBox Box)> _controlChecks = new();
     private readonly List<(string Id, CheckBox Box)> _directChecks = new();
     private bool _loading = true;
-    private bool _startupTaskOriginal, _noUacTaskOriginal;
+    private bool _noUacTaskOriginal;
     private bool _tasksKnown;
     private CancellationTokenSource? _testCts;
     private Task? _testTask;
 
     public AppSettings? Result { get; private set; }
+
+    /// <summary>Se ha encontrado una actualización con «Buscar ahora»: la ventana principal mostrará el aviso.</summary>
+    public bool CheckUpdatesNow { get; private set; }
 
     public SettingsWindow(App app)
     {
@@ -35,6 +38,12 @@ public partial class SettingsWindow : Window
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         var s = _edit;
+
+        // Idioma: "Automático" + los disponibles
+        AddLanguagePill(null, Loc.T("set.language.auto"));
+        foreach (var (code, name) in Loc.Languages) AddLanguagePill(code, name);
+        UpdatesCheck.IsChecked = s.CheckUpdates;
+
         switch (s.Backend)
         {
             case BackendKind.FanControl: BkFanControl.IsChecked = true; break;
@@ -63,18 +72,13 @@ public partial class SettingsWindow : Window
         ForceCloseCheck.IsChecked = s.ForceCloseApps;
         SoundCheck.IsChecked = s.SoundEnabled;
         ReducedCheck.IsChecked = s.ReducedAnimations;
-        TrayCheck.IsChecked = s.CloseToTray;
 
         var st = s.Stats;
         var (rank, next) = Memes.RankFor(st.TotalCooldowns);
-        StatsText.Text =
-            $"Rango: {rank} ({next})\n" +
-            $"Enfriamientos completados: {st.TotalCooldowns}\n" +
-            $"Grados de calor residual eliminados: {st.TotalDegreesDropped:0} °C (récord: -{st.BestDrop:0} °C en una sesión)\n" +
-            $"Noches salvadas (apagados tras enfriar): {st.NightsSaved}\n" +
-            $"Tiempo total con las turbinas a tope: {TimeSpan.FromSeconds(st.TotalCoolingSeconds):hh\\:mm\\:ss}";
+        StatsText.Text = Loc.F("set.stats.text", rank, next, st.TotalCooldowns, st.TotalDegreesDropped.ToString("0"),
+            st.BestDrop.ToString("0"), st.NightsSaved, TimeSpan.FromSeconds(st.TotalCoolingSeconds).ToString(@"hh\:mm\:ss"));
 
-        VersionText.Text = $"FanMaxxxing v{typeof(App).Assembly.GetName().Version?.ToString(3)} · {(Elevation.IsAdmin ? "administrador ✓" : "sin admin")} · datos en {AppPaths.DataDir}";
+        VersionText.Text = $"FanMaxxxing v{UpdateChecker.CurrentVersion.ToString(3)} · {(Elevation.IsAdmin ? Loc.T("set.admin.yes") : Loc.T("set.admin.no"))} · {AppPaths.DataDir}";
 
         UpdateSliderLabels();
         RefreshConfigList();
@@ -83,20 +87,47 @@ public partial class SettingsWindow : Window
         CustomMaxRow.IsEnabled = UseCustomMax.IsChecked == true;
         _loading = false;
 
-        // Consultar las tareas programadas tarda un poco: en segundo plano.
-        StartupCheck.IsEnabled = NoUacCheck.IsEnabled = false;
-        var (startup, noUac) = await Task.Run(() =>
-            (WindowsIntegration.TaskExists(WindowsIntegration.StartupTask), WindowsIntegration.TaskExists(WindowsIntegration.ElevatedTask)));
-        _startupTaskOriginal = startup;
-        _noUacTaskOriginal = noUac;
-        StartupCheck.IsChecked = startup;
-        NoUacCheck.IsChecked = noUac;
+        // Consultar la tarea programada tarda un poco: en segundo plano.
+        NoUacCheck.IsEnabled = false;
+        _noUacTaskOriginal = await Task.Run(() => WindowsIntegration.TaskExists(WindowsIntegration.ElevatedTask));
+        NoUacCheck.IsChecked = _noUacTaskOriginal;
         _tasksKnown = true;
-        StartupCheck.IsEnabled = NoUacCheck.IsEnabled = Elevation.IsAdmin;
-        if (!Elevation.IsAdmin)
+        NoUacCheck.IsEnabled = Elevation.IsAdmin;
+        if (!Elevation.IsAdmin) NoUacCheck.ToolTip = Loc.T("set.needadmin");
+    }
+
+    private void AddLanguagePill(string? code, string name)
+    {
+        LanguagePanel.Children.Add(new RadioButton
         {
-            StartupCheck.ToolTip = NoUacCheck.ToolTip = "Abre FanMaxxxing como administrador para cambiar esto.";
+            Style = (Style)FindResource("Pill"),
+            GroupName = "lang",
+            Content = name,
+            Tag = code,
+            IsChecked = _edit.Language == code,
+        });
+    }
+
+    private string? SelectedLanguage =>
+        LanguagePanel.Children.OfType<RadioButton>().FirstOrDefault(r => r.IsChecked == true)?.Tag as string;
+
+    // ---------------------------------------------------------------------
+    //  Actualizaciones
+    // ---------------------------------------------------------------------
+
+    private async void CheckNow_Click(object sender, RoutedEventArgs e)
+    {
+        CheckNowButton.IsEnabled = false;
+        UpdateResult.Text = Loc.T("set.updates.checking");
+        var info = await UpdateChecker.CheckAsync();
+        CheckNowButton.IsEnabled = true;
+        if (info == null)
+        {
+            UpdateResult.Text = Loc.F("update.none.text", UpdateChecker.CurrentVersion.ToString(3));
+            return;
         }
+        UpdateResult.Text = Loc.F("set.updates.found", info.Version.ToString(3));
+        CheckUpdatesNow = true;
     }
 
     // ---------------------------------------------------------------------
@@ -130,13 +161,13 @@ public partial class SettingsWindow : Window
             case BackendKind.Direct:
                 st = _app.Sensors is HardwareService { HasMotherboard: true } hw
                     ? new DirectBackend(hw, temp).GetStatus()
-                    : new BackendStatus(true, "Control directo", "Los ventiladores se detectarán al guardar.");
+                    : new BackendStatus(true, Loc.T("be.direct.name"), Loc.T("set.direct.onsave"));
                 break;
             default:
-                st = new BackendStatus(true, "Simulación", "Nada de hardware real: para probar la app.");
+                st = new BackendStatus(true, Loc.T("be.sim.title"), Loc.T("be.sim.text"));
                 break;
         }
-        string prefix = SelectedBackend == BackendKind.Auto ? $"Automático → {kind}: " : "";
+        string prefix = SelectedBackend == BackendKind.Auto ? Loc.F("set.engine.autoprefix", kind) + " " : "";
         BkStatus.Text = $"{prefix}{st.Title}. {st.Detail}";
         BkDot.Fill = st.Ready ? (Brush)FindResource("Lime") : (Brush)FindResource("Danger");
     }
@@ -151,8 +182,8 @@ public partial class SettingsWindow : Window
     {
         var dlg = new OpenFileDialog
         {
-            Title = "¿Dónde está FanControl.exe?",
-            Filter = "FanControl|FanControl.exe|Ejecutables|*.exe",
+            Title = Loc.T("set.fc.browse.title"),
+            Filter = "FanControl|FanControl.exe|*.exe|*.exe",
             FileName = "FanControl.exe",
         };
         if (File.Exists(ExePathBox.Text)) dlg.InitialDirectory = Path.GetDirectoryName(ExePathBox.Text);
@@ -169,7 +200,7 @@ public partial class SettingsWindow : Window
         var found = FanControlLocator.FindExe(null);
         if (found == null)
         {
-            BkStatus.Text = "No encuentro FanControl en los sitios habituales. Usa «Buscar…».";
+            BkStatus.Text = Loc.T("set.fc.detect.none");
             BkDot.Fill = (Brush)FindResource("Danger");
             return;
         }
@@ -194,7 +225,7 @@ public partial class SettingsWindow : Window
 
         var auto = new ListBoxItem
         {
-            Content = configs.Count > 0 ? $"Automática  ·  ahora mismo: {Path.GetFileName(configs[0])}" : "Automática (no hay configs todavía)",
+            Content = configs.Count > 0 ? Loc.F("set.fc.auto.now", Path.GetFileName(configs[0])) : Loc.T("set.fc.auto.none"),
             Tag = null,
         };
         ConfigList.Items.Add(auto);
@@ -203,7 +234,7 @@ public partial class SettingsWindow : Window
         {
             var item = new ListBoxItem
             {
-                Content = $"{Path.GetFileName(c)}   ·   {File.GetLastWriteTime(c):dd/MM HH:mm}",
+                Content = $"{Path.GetFileName(c)}   ·   {File.GetLastWriteTime(c):g}",
                 Tag = c,
                 ToolTip = c,
             };
@@ -225,7 +256,7 @@ public partial class SettingsWindow : Window
 
     private void BrowseConfig_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog { Title = "Tu config normal de FanControl", Filter = "Config de FanControl|*.json" };
+        var dlg = new OpenFileDialog { Title = Loc.T("set.fc.normal"), Filter = "FanControl|*.json" };
         if (ExePath != null && Directory.Exists(FanControlLocator.ConfigDir(ExePath))) dlg.InitialDirectory = FanControlLocator.ConfigDir(ExePath);
         if (dlg.ShowDialog(this) == true)
         {
@@ -245,7 +276,7 @@ public partial class SettingsWindow : Window
         var path = FanControlLocator.ResolveNormalConfig(ExePath, (ConfigList.SelectedItem as ListBoxItem)?.Tag as string);
         if (path == null)
         {
-            ControlsPanel.Children.Add(Hint("Sin config de FanControl todavía. Abre FanControl, configura tus ventiladores y vuelve."));
+            ControlsPanel.Children.Add(Hint(Loc.T("set.fc.noconfig")));
             return;
         }
 
@@ -254,12 +285,12 @@ public partial class SettingsWindow : Window
             var controls = FanControlConfigTool.ListControlsFromFile(path);
             if (controls.Count == 0)
             {
-                ControlsPanel.Children.Add(Hint("Esta config no tiene ventiladores controlables. Crea una config MAX a mano y márcala abajo."));
+                ControlsPanel.Children.Add(Hint(Loc.T("set.fc.nofans")));
                 return;
             }
             foreach (var c in controls)
             {
-                string state = c.Enabled == false ? " · desactivado en FanControl" : c.ManualNow ? $" · manual {c.ManualValue:0}%" : "";
+                string state = c.Enabled == false ? " · " + Loc.T("set.fc.disabled") : c.ManualNow ? $" · manual {c.ManualValue:0}%" : "";
                 var cb = new CheckBox
                 {
                     Style = (Style)FindResource("Switch"),
@@ -280,7 +311,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            ControlsPanel.Children.Add(Hint("No se pudo leer la config: " + ex.Message));
+            ControlsPanel.Children.Add(Hint(Loc.T("set.fc.readerror") + " " + ex.Message));
         }
     }
 
@@ -291,15 +322,13 @@ public partial class SettingsWindow : Window
         _directChecks.Clear();
         if (_app.Sensors is not HardwareService { HasMotherboard: true } hw)
         {
-            DirectControlsPanel.Children.Add(Hint("Elige «Directo» y guarda para detectar los ventiladores."));
+            DirectControlsPanel.Children.Add(Hint(Loc.T("set.direct.choose")));
             return;
         }
         var list = hw.ControlList;
         if (list.Count == 0)
         {
-            DirectControlsPanel.Children.Add(Hint(HardwareService.PawnIoInstalled()
-                ? "No se han detectado ventiladores controlables (o todavía se están buscando)."
-                : "No está instalado el driver PawnIO: sin él no se puede tocar la placa base."));
+            DirectControlsPanel.Children.Add(Hint(HardwareService.PawnIoInstalled() ? Loc.T("set.direct.none") : Loc.T("be.direct.nopawnio")));
             return;
         }
         foreach (var (id, name) in list)
@@ -335,7 +364,7 @@ public partial class SettingsWindow : Window
 
     private void BrowseCustomMax_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = new OpenFileDialog { Title = "Tu config MAX de FanControl (todo al 100 %)", Filter = "Config de FanControl|*.json" };
+        var dlg = new OpenFileDialog { Title = Loc.T("set.fc.custommax"), Filter = "FanControl|*.json" };
         if (ExePath != null && Directory.Exists(FanControlLocator.ConfigDir(ExePath))) dlg.InitialDirectory = FanControlLocator.ConfigDir(ExePath);
         if (dlg.ShowDialog(this) == true)
         {
@@ -372,6 +401,8 @@ public partial class SettingsWindow : Window
     {
         CaptureExclusions();
         var s = _edit.Clone();
+        s.Language = SelectedLanguage;
+        s.CheckUpdates = UpdatesCheck.IsChecked == true;
         s.Backend = SelectedBackend;
         s.FanControlExePath = ExePath;
         s.NormalConfigPath = (ConfigList.SelectedItem as ListBoxItem)?.Tag as string;
@@ -388,7 +419,6 @@ public partial class SettingsWindow : Window
         s.ForceCloseApps = ForceCloseCheck.IsChecked == true;
         s.SoundEnabled = SoundCheck.IsChecked == true;
         s.ReducedAnimations = ReducedCheck.IsChecked == true;
-        s.CloseToTray = TrayCheck.IsChecked == true;
         s.Sanitize();
         return s;
     }
@@ -417,10 +447,10 @@ public partial class SettingsWindow : Window
                 backend = new DirectBackend(hw, temp);
                 break;
             case BackendKind.Direct:
-                TestResult.Text = "Guarda primero con el motor «Directo» para detectar los ventiladores.";
+                TestResult.Text = Loc.T("set.test.directfirst");
                 return;
             default:
-                TestResult.Text = "En simulación no hay nada que probar (pero queda muy bonito).";
+                TestResult.Text = Loc.T("set.test.sim");
                 return;
         }
 
@@ -433,35 +463,37 @@ public partial class SettingsWindow : Window
 
         _testCts = new CancellationTokenSource();
         SaveButton.IsEnabled = CancelButton.IsEnabled = false;
-        TestButtonText.Text = "Parar prueba";
-        TestResult.Text = "Subiendo ventiladores… escucha 👂";
+        TestButtonText.Text = Loc.T("set.test.stop");
+        TestResult.Text = Loc.T("set.test.starting");
         _testTask = RunTestAsync(backend, _testCts.Token);
         await _testTask;
         _testCts.Dispose();
         _testCts = null;
         _testTask = null;
         SaveButton.IsEnabled = CancelButton.IsEnabled = true;
-        TestButtonText.Text = "🧪  Probar 10 segundos";
+        TestButtonText.Text = Loc.T("set.test");
     }
 
     private async Task RunTestAsync(IFanBackend backend, CancellationToken ct)
     {
+        bool failed = false;
         try
         {
             await backend.BoostAsync(ct);
             for (int i = 10; i > 0; i--)
             {
-                TestResult.Text = $"🌀 Al 100 %… vuelven a automático en {i} s";
+                TestResult.Text = Loc.F("set.test.running", i);
                 await Task.Delay(1000, ct);
             }
-            TestResult.Text = "Volviendo a automático…";
+            TestResult.Text = Loc.T("set.test.restoring");
         }
         catch (OperationCanceledException)
         {
-            TestResult.Text = "Prueba cancelada. Volviendo a automático…";
+            TestResult.Text = Loc.T("set.test.cancelled");
         }
         catch (Exception ex)
         {
+            failed = true;
             TestResult.Text = "✖ " + ex.Message;
             Log.Warn("Prueba fallida: " + ex.Message);
         }
@@ -470,12 +502,11 @@ public partial class SettingsWindow : Window
             try
             {
                 await backend.RestoreAsync();
-                if (!TestResult.Text.StartsWith("✖"))
-                    TestResult.Text = "✔ Listo. Si has oído el despegue, todo funciona. Ventiladores en automático.";
+                if (!failed) TestResult.Text = Loc.T("set.test.ok");
             }
             catch (Exception ex)
             {
-                TestResult.Text = "✖ No se pudo volver a automático: " + ex.Message;
+                TestResult.Text = "✖ " + Loc.T("set.test.restorefail") + " " + ex.Message;
             }
         }
     }
@@ -495,16 +526,16 @@ public partial class SettingsWindow : Window
     // ---------------------------------------------------------------------
 
     private void ShortcutShutdown_Click(object sender, RoutedEventArgs e) =>
-        MakeShortcut("Enfriar y apagar (FanMaxxxing)", "--start --then shutdown", "Pone los ventiladores al máximo y apaga el PC al terminar");
+        MakeShortcut(Loc.T("shortcut.cooloff.name"), "--start --then shutdown", Loc.T("shortcut.cooloff.desc"));
 
     private void ShortcutCool_Click(object sender, RoutedEventArgs e) =>
-        MakeShortcut("Enfriar ahora (FanMaxxxing)", "--start --then nothing", "Pone los ventiladores al máximo unos minutos");
+        MakeShortcut(Loc.T("shortcut.cool.name"), "--start --then nothing", Loc.T("shortcut.cool.desc"));
 
     private void MakeShortcut(string name, string args, string description)
     {
         var err = WindowsIntegration.CreateDesktopShortcut(name, args, description);
         ExtrasResult.Text = err == null
-            ? $"✔ Creado «{name}» en el escritorio." + (NoUacCheck.IsChecked == true ? "" : " Consejo: activa «Abrir sin UAC» para que no pida permisos.")
+            ? Loc.F("set.shortcut.created", name) + (NoUacCheck.IsChecked == true ? "" : " " + Loc.T("set.shortcut.tip"))
             : "✖ " + err;
     }
 
@@ -530,26 +561,14 @@ public partial class SettingsWindow : Window
 
         if (_tasksKnown && Elevation.IsAdmin)
         {
-            var errors = new List<string>();
-            bool wantStartup = StartupCheck.IsChecked == true;
             bool wantNoUac = NoUacCheck.IsChecked == true;
-            if (wantStartup != _startupTaskOriginal)
-            {
-                var err = wantStartup
-                    ? WindowsIntegration.CreateTask(WindowsIntegration.StartupTask, "--tray", atLogon: true)
-                    : WindowsIntegration.DeleteTask(WindowsIntegration.StartupTask);
-                if (err != null) errors.Add("Inicio con Windows: " + err);
-            }
             if (wantNoUac != _noUacTaskOriginal)
             {
                 var err = wantNoUac
                     ? WindowsIntegration.CreateTask(WindowsIntegration.ElevatedTask, "--from-task", atLogon: false)
                     : WindowsIntegration.DeleteTask(WindowsIntegration.ElevatedTask);
-                if (err != null) errors.Add("Abrir sin UAC: " + err);
-            }
-            if (errors.Count > 0)
-            {
-                MessageBox.Show(this, string.Join("\n", errors), "FanMaxxxing", MessageBoxButton.OK, MessageBoxImage.Warning);
+                if (err != null)
+                    MessageBox.Show(this, Loc.T("set.nouac") + ": " + err, "FanMaxxxing", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
 

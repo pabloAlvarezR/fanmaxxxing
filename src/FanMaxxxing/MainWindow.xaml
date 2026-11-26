@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="clr-namespace:FanMaxxxing.UI"
+        xmlns:loc="clr-namespace:FanMaxxxing.UI"
         Title="FanMaxxxing" Width="1120" Height="740" MinWidth="980" MinHeight="680"
         WindowStyle="None" ResizeMode="CanResize" WindowStartupLocation="CenterScreen"
         Background="{StaticResource Bg0}" Foreground="{StaticResource Text}"
@@ -43,24 +44,24 @@
                         <Run Text="FAN" Foreground="{StaticResource Text}" /><Run Text="MAXXXING" Foreground="{StaticResource Cyan}" />
                     </TextBlock>
                     <Border Margin="12,2,0,0" VerticalAlignment="Center" CornerRadius="6" Padding="7,2" Background="#22FF2E88">
-                        <TextBlock Text="enfriador post-vicio" FontSize="11" Foreground="{StaticResource Magenta}" />
+                        <TextBlock Text="{loc:T app.tagline}" FontSize="11" Foreground="{StaticResource Magenta}" />
                     </Border>
                     <Border x:Name="SimBadge" Margin="8,2,0,0" VerticalAlignment="Center" CornerRadius="6" Padding="7,2" Background="#33FFD60A" Visibility="Collapsed">
-                        <TextBlock Text="SIMULACIÓN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Yellow}" />
+                        <TextBlock Text="{loc:T badge.sim}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Yellow}" />
                     </Border>
                     <Border x:Name="NoAdminBadge" Margin="8,2,0,0" VerticalAlignment="Center" CornerRadius="6" Padding="7,2" Background="#33FF4D5E" Visibility="Collapsed"
-                            ToolTip="Sin permisos de administrador: FanControl puede pedir permiso y la temperatura de la CPU no se podrá leer.">
-                        <TextBlock Text="SIN ADMIN" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Danger}" />
+                            ToolTip="{loc:T badge.noadmin.tip}">
+                        <TextBlock Text="{loc:T badge.noadmin}" FontSize="11" FontWeight="Bold" Foreground="{StaticResource Danger}" />
                     </Border>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <Button x:Name="SoundButton" Style="{StaticResource ChromeButton}" FontSize="15" Content="&#xE767;" ToolTip="Sonido"
+                    <Button x:Name="SoundButton" Style="{StaticResource ChromeButton}" FontSize="15" Content="&#xE767;" ToolTip="{loc:T tip.sound}"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="SoundButton_Click" />
-                    <Button x:Name="SettingsButton" Style="{StaticResource ChromeButton}" FontSize="15" Content="&#xE713;" ToolTip="Ajustes"
+                    <Button x:Name="SettingsButton" Style="{StaticResource ChromeButton}" FontSize="15" Content="&#xE713;" ToolTip="{loc:T tip.settings}"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="SettingsButton_Click" />
-                    <Button Style="{StaticResource ChromeButton}" Content="&#xE921;" ToolTip="Minimizar"
+                    <Button Style="{StaticResource ChromeButton}" Content="&#xE921;" ToolTip="{loc:T tip.minimize}"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="MinimizeButton_Click" />
-                    <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" ToolTip="Cerrar"
+                    <Button Style="{StaticResource CloseButton}" Content="&#xE8BB;" ToolTip="{loc:T tip.close}"
                             WindowChrome.IsHitTestVisibleInChrome="True" Click="CloseButton_Click" />
                 </StackPanel>
             </Grid>
@@ -81,13 +82,13 @@
                             <RowDefinition Height="*" />
                             <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
-                        <ui:OutlinedText x:Name="TopCaption" Grid.Row="0" FontSize="36" Text="FAN MAXXXING" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Stretch">
+                        <ui:OutlinedText x:Name="TopCaption" Grid.Row="0" FontSize="36" Text="" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Stretch">
                             <ui:OutlinedText.RenderTransform>
                                 <ScaleTransform x:Name="TopCaptionScale" />
                             </ui:OutlinedText.RenderTransform>
                         </ui:OutlinedText>
                         <ui:FanView x:Name="Fan" Grid.Row="1" Margin="10" />
-                        <ui:OutlinedText x:Name="BottomCaption" Grid.Row="2" FontSize="36" Text="CARGANDO MEMES" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Stretch">
+                        <ui:OutlinedText x:Name="BottomCaption" Grid.Row="2" FontSize="36" Text="" RenderTransformOrigin="0.5,0.5" HorizontalAlignment="Stretch">
                             <ui:OutlinedText.RenderTransform>
                                 <ScaleTransform x:Name="BottomCaptionScale" />
                             </ui:OutlinedText.RenderTransform>
@@ -117,25 +118,25 @@
                     <Border Grid.Row="1" Margin="0,12,0,0" CornerRadius="16" Background="{StaticResource Card}" BorderBrush="{StaticResource CardBorder}" BorderThickness="1" Padding="18,10,18,14">
                         <StackPanel>
                             <Grid>
-                                <TextBlock x:Name="TimerText" Text="05:00" FontFamily="{StaticResource NumFont}" FontSize="62" FontWeight="SemiBold" />
+                                <TextBlock x:Name="TimerText" Text="03:00" FontFamily="{StaticResource NumFont}" FontSize="62" FontWeight="SemiBold" />
                                 <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
                                     <TextBlock x:Name="RpmText" Text="" FontFamily="{StaticResource NumFont}" FontSize="22" HorizontalAlignment="Right" Foreground="{StaticResource Cyan}" />
                                     <TextBlock x:Name="RpmLabel" Text="" FontSize="11" HorizontalAlignment="Right" Foreground="{StaticResource TextFaint}" />
                                 </StackPanel>
                             </Grid>
-                            <TextBlock x:Name="StatusText" Text="Listo para maxxear." TextWrapping="Wrap" FontSize="13" Foreground="{StaticResource TextDim}" MinHeight="36" />
+                            <TextBlock x:Name="StatusText" Text="" TextWrapping="Wrap" FontSize="13" Foreground="{StaticResource TextDim}" MinHeight="36" />
                         </StackPanel>
                     </Border>
 
                     <ScrollViewer Grid.Row="2" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" Focusable="False">
                     <StackPanel Margin="2,0,2,0">
-                        <TextBlock Text="DURACIÓN" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="{loc:T main.duration}" Style="{StaticResource SectionTitle}" />
                         <WrapPanel x:Name="DurationPanel">
                             <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="1 min" Tag="1" Checked="Duration_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="2 min" Tag="2" Checked="Duration_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="3 min" Tag="3" Checked="Duration_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="5 min" Tag="5" Checked="Duration_Checked" />
-                            <RadioButton x:Name="CustomDurationPill" Style="{StaticResource Pill}" GroupName="dur" Content="Personalizado" Tag="custom" Checked="Duration_Checked" />
+                            <RadioButton x:Name="CustomDurationPill" Style="{StaticResource Pill}" GroupName="dur" Content="{loc:T main.custom}" Tag="custom" Checked="Duration_Checked" />
                         </WrapPanel>
                         <Grid x:Name="CustomDurationRow" Visibility="Collapsed" Margin="2,0,0,4">
                             <Grid.ColumnDefinitions>
@@ -148,16 +149,16 @@
                                        FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
                         </Grid>
 
-                        <TextBlock Text="AL TERMINAR" Style="{StaticResource SectionTitle}" Margin="0,10,0,8" />
+                        <TextBlock Text="{loc:T main.after}" Style="{StaticResource SectionTitle}" Margin="0,10,0,8" />
                         <WrapPanel x:Name="AfterPanel">
-                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Nada, sigo" Tag="Nothing" Checked="After_Checked" />
-                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Apagar" Tag="Shutdown" Checked="After_Checked" />
-                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Hibernar" Tag="Hibernate" Checked="After_Checked" />
-                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Suspender" Tag="Sleep" Checked="After_Checked" />
+                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="{loc:T after.nothing}" Tag="Nothing" Checked="After_Checked" />
+                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="{loc:T after.shutdown}" Tag="Shutdown" Checked="After_Checked" />
+                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="{loc:T after.hibernate}" Tag="Hibernate" Checked="After_Checked" />
+                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="{loc:T after.sleep}" Tag="Sleep" Checked="After_Checked" />
                         </WrapPanel>
 
                         <CheckBox x:Name="SmartStopCheck" Style="{StaticResource Switch}" Margin="0,10,0,0" Click="SmartStopCheck_Click">
-                            <TextBlock x:Name="SmartStopText" TextWrapping="Wrap" Text="Parar antes si ya está todo frío" />
+                            <TextBlock x:Name="SmartStopText" TextWrapping="Wrap" Text="" />
                         </CheckBox>
                     </StackPanel>
                     </ScrollViewer>
@@ -195,8 +196,8 @@
                             </ControlTemplate>
                         </Button.Template>
                         <StackPanel>
-                            <TextBlock x:Name="MainButtonText" Text="MAXXEAR" FontFamily="{StaticResource MemeFont}" FontSize="38" Foreground="White" HorizontalAlignment="Center" />
-                            <TextBlock x:Name="MainButtonSub" Text="ventiladores al 100 %" FontSize="13" Foreground="#E6FFFFFF" HorizontalAlignment="Center" Margin="0,-2,0,0" />
+                            <TextBlock x:Name="MainButtonText" Text="{loc:T main.button.start}" FontFamily="{StaticResource MemeFont}" FontSize="38" Foreground="White" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="MainButtonSub" Text="" FontSize="13" Foreground="#E6FFFFFF" HorizontalAlignment="Center" Margin="0,-2,0,0" />
                         </StackPanel>
                     </Button>
                 </Grid>
@@ -204,13 +205,34 @@
 
             <!-- ===== Pie ===== -->
             <Grid Grid.Row="2" Margin="20,0,20,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <!-- Aviso de actualización -->
+                <Border x:Name="UpdatePanel" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed"
+                        CornerRadius="14" Padding="12,3,4,3" Background="#3322D3EE" BorderBrush="{StaticResource Cyan}" BorderThickness="1">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⬆" FontSize="13" Foreground="{StaticResource Cyan}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock x:Name="UpdateText" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Button x:Name="UpdateInstallButton" Style="{StaticResource GhostButton}" Padding="10,2" Margin="10,0,0,0" FontSize="12"
+                                Background="{StaticResource NeonGradient}" BorderBrush="Transparent" Click="UpdateInstall_Click">
+                            <TextBlock x:Name="UpdateInstallText" Text="{loc:T update.install}" Foreground="White" FontWeight="SemiBold" />
+                        </Button>
+                        <Button x:Name="UpdateNotesButton" Style="{StaticResource GhostButton}" Padding="10,2" Margin="6,0,0,0" FontSize="12"
+                                Content="{loc:T update.notes}" Click="UpdateNotes_Click" />
+                        <Button x:Name="UpdateLaterButton" Style="{StaticResource ChromeButton}" Width="26" Height="22" FontSize="9" Margin="4,0,0,0"
+                                Content="&#xE8BB;" ToolTip="{loc:T update.later}" Click="UpdateLater_Click" />
+                    </StackPanel>
+                </Border>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <Ellipse x:Name="StatusDot" Width="10" Height="10" Fill="{StaticResource TextFaint}" />
-                    <TextBlock x:Name="BackendTitle" Margin="8,0,0,0" FontWeight="SemiBold" FontSize="12" Text="Comprobando motor…" />
-                    <TextBlock x:Name="BackendDetail" Margin="10,0,0,0" FontSize="12" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" MaxWidth="420" />
+                    <TextBlock x:Name="BackendTitle" Margin="8,0,0,0" FontWeight="SemiBold" FontSize="12" Text="{loc:T backend.checking}" />
+                    <TextBlock x:Name="BackendDetail" Margin="10,0,0,0" FontSize="12" Foreground="{StaticResource TextDim}" TextTrimming="CharacterEllipsis" MaxWidth="300" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock Text="RANGO " FontSize="12" Foreground="{StaticResource TextFaint}" FontFamily="{StaticResource NumFont}" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="{loc:T footer.rank}" Margin="0,0,5,0" FontSize="12" Foreground="{StaticResource TextFaint}" FontFamily="{StaticResource NumFont}" />
                     <TextBlock x:Name="RankText" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Yellow}" FontFamily="{StaticResource NumFont}" />
                     <TextBlock x:Name="RankNext" Margin="10,0,0,0" FontSize="12" Foreground="{StaticResource TextDim}" />
                 </StackPanel>
@@ -256,25 +278,51 @@
         <Grid x:Name="PowerOverlay" Visibility="Collapsed" Background="#EB05070F">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" MaxWidth="760">
                 <TextBlock Text="☾" FontFamily="Segoe UI Symbol" FontSize="86" Foreground="{StaticResource Yellow}" HorizontalAlignment="Center" />
-                <ui:OutlinedText x:Name="PowerTitle" FontSize="48" Text="BUENAS NOCHES, GAMER" HorizontalAlignment="Stretch" />
-                <TextBlock x:Name="PowerSub" Text="El equipo se apagará en" FontSize="18" Foreground="{StaticResource TextDim}" HorizontalAlignment="Center" Margin="0,8,0,0" />
+                <ui:OutlinedText x:Name="PowerTitle" FontSize="48" Text="" HorizontalAlignment="Stretch" />
+                <TextBlock x:Name="PowerSub" Text="" FontSize="18" Foreground="{StaticResource TextDim}" HorizontalAlignment="Center" Margin="0,8,0,0" />
                 <TextBlock x:Name="PowerCount" Text="30" FontFamily="{StaticResource NumFont}" FontSize="132" FontWeight="Bold" Foreground="{StaticResource Text}"
                            HorizontalAlignment="Center" RenderTransformOrigin="0.5,0.5">
                     <TextBlock.RenderTransform>
                         <ScaleTransform x:Name="PowerCountScale" />
                     </TextBlock.RenderTransform>
                 </TextBlock>
-                <TextBlock x:Name="PowerHint" Text="Los ventiladores ya han vuelto a automático." FontSize="13" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" Margin="0,0,0,18" />
+                <TextBlock x:Name="PowerHint" Text="" FontSize="13" Foreground="{StaticResource TextFaint}" HorizontalAlignment="Center" Margin="0,0,0,18" />
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button x:Name="PowerCancelButton" Style="{StaticResource GhostButton}" FontSize="16" Padding="22,12" Click="PowerCancel_Click"
                             Background="#33FF2E88" BorderBrush="{StaticResource Magenta}">
-                        <TextBlock Text="¡QUIETO! Sigo despierto" FontWeight="SemiBold" />
+                        <TextBlock Text="{loc:T power.cancel}" FontWeight="SemiBold" />
                     </Button>
                     <Button x:Name="PowerNowButton" Style="{StaticResource GhostButton}" FontSize="16" Padding="22,12" Margin="14,0,0,0" Click="PowerNow_Click">
-                        <TextBlock x:Name="PowerNowText" Text="Hazlo ya" />
+                        <TextBlock x:Name="PowerNowText" Text="" />
                     </Button>
                 </StackPanel>
             </StackPanel>
+        </Grid>
+
+        <!-- ===== Diálogo de confirmación (p. ej. al cerrar) ===== -->
+        <Grid x:Name="ConfirmOverlay" Visibility="Collapsed" Background="#C805070F" Panel.ZIndex="20">
+            <Border HorizontalAlignment="Center" VerticalAlignment="Center" MaxWidth="520" CornerRadius="20" Padding="28,24"
+                    Background="#F2151B33" BorderThickness="2">
+                <Border.BorderBrush>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,1">
+                        <GradientStop Color="#22D3EE" Offset="0" />
+                        <GradientStop Color="#FF2E88" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.BorderBrush>
+                <StackPanel>
+                    <TextBlock x:Name="ConfirmTitle" FontFamily="{StaticResource NumFont}" FontSize="22" FontWeight="Bold" TextWrapping="Wrap" />
+                    <TextBlock x:Name="ConfirmText" Margin="0,10,0,0" FontSize="14" Foreground="{StaticResource TextDim}" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,22,0,0">
+                        <Button x:Name="ConfirmNoButton" Style="{StaticResource GhostButton}" Padding="18,9" Click="ConfirmNo_Click">
+                            <TextBlock x:Name="ConfirmNoText" />
+                        </Button>
+                        <Button x:Name="ConfirmYesButton" Style="{StaticResource GhostButton}" Padding="18,9" Margin="10,0,0,0" Click="ConfirmYes_Click"
+                                Background="#55FF2E88" BorderBrush="{StaticResource Magenta}">
+                            <TextBlock x:Name="ConfirmYesText" FontWeight="SemiBold" />
+                        </Button>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
         </Grid>
     </Grid>
 </Window>

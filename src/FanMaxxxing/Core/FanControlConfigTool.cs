@@ -13,9 +13,9 @@ public sealed record FcControlInfo(string Id, string Name, bool? Enabled, bool M
         {
             var id = Id.ToLowerInvariant();
             if (id.Contains("gpu") || id.Contains("nvidia")) return "GPU";
-            if (id.Contains("lpc") || id.Contains("superio") || id.Contains("motherboard")) return "Placa";
+            if (id.Contains("lpc") || id.Contains("superio") || id.Contains("motherboard")) return Loc.T("kind.board");
             if (id.Contains("plugin")) return "Plugin";
-            return "Otro";
+            return Loc.T("kind.other");
         }
     }
 }

@@ -20,7 +20,7 @@ public partial class MainWindow : Window
     // Temporizadores: todos creados una vez, parados cuando no hacen falta.
     private readonly DispatcherTimer _uiTimer;
     private readonly DispatcherTimer _memeTimer;
-    private readonly DispatcherTimer _dogeTimer;
+    private readonly DispatcherTimer _tagTimer;
     private readonly DispatcherTimer _powerTimer;
     private readonly DispatcherTimer _toastTimer;
 
@@ -55,7 +55,12 @@ public partial class MainWindow : Window
     private int _uiTicks;
     private int _powerLeft;
     private AfterAction _powerAction;
-    private bool _trayHintShown;
+
+    // Diálogo de confirmación y actualizaciones
+    private TaskCompletionSource<bool>? _confirmTcs;
+    private bool _closePromptOpen;
+    private UpdateInfo? _update;
+    private CancellationTokenSource? _updateCts;
 
     // Pool de etiquetas flotantes estilo texto de TikTok (tamaño fijo)
     private readonly Border[] _tags = new Border[6];
@@ -73,9 +78,8 @@ public partial class MainWindow : Window
     private static readonly Brush CancelButtonBrush = MakeGradient("#FF6B35", "#FF3B3B", "#B0124F");
     private static readonly Brush BusyButtonBrush = MakeGradient("#3A4470", "#2B3560", "#3A4470");
 
-    private static readonly AnimationTimeline DogeFade = MakeDogeFade();
+    private static readonly AnimationTimeline TagFade = MakeTagFade();
     private static readonly IEasingFunction BackOut = Freeze(new BackEase { EasingMode = EasingMode.EaseOut, Amplitude = 0.5 });
-    private static readonly IEasingFunction CubicOut = Freeze(new CubicEase { EasingMode = EasingMode.EaseOut });
 
     public MainWindow(App app)
     {
@@ -86,8 +90,8 @@ public partial class MainWindow : Window
         _uiTimer.Tick += UiTimer_Tick;
         _memeTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(7) };
         _memeTimer.Tick += (_, _) => ShowMeme(_memeMood);
-        _dogeTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2.1) };
-        _dogeTimer.Tick += (_, _) => SpawnDoge();
+        _tagTimer = new DispatcherTimer(DispatcherPriority.Background) { Interval = TimeSpan.FromSeconds(2.1) };
+        _tagTimer.Tick += (_, _) => SpawnTag();
         _powerTimer = new DispatcherTimer(DispatcherPriority.Normal) { Interval = TimeSpan.FromSeconds(1) };
         _powerTimer.Tick += PowerTimer_Tick;
         _toastTimer = new DispatcherTimer(DispatcherPriority.Background);
@@ -96,7 +100,7 @@ public partial class MainWindow : Window
         _engine.PhaseChanged += Engine_PhaseChanged;
         _engine.Ticked += Engine_Ticked;
 
-        var tagFont = new FontFamily("Segoe UI Black, Segoe UI");
+        var tagFont = new FontFamily("Segoe UI Black, Microsoft YaHei UI, Segoe UI");
         for (int i = 0; i < _tags.Length; i++)
         {
             var tag = new Border
@@ -139,31 +143,24 @@ public partial class MainWindow : Window
         SimBadge.Visibility = _app.ForceSimulation || _app.Settings.Backend == BackendKind.Simulation ? Visibility.Visible : Visibility.Collapsed;
         NoAdminBadge.Visibility = Elevation.IsAdmin ? Visibility.Collapsed : Visibility.Visible;
 
-        if (!_app.Settings.FirstRunDone)
-        {
-            _app.Settings.FirstRunDone = true;
-            _app.SaveSettings();
-            Dispatcher.BeginInvoke(ShowWelcome, DispatcherPriority.ApplicationIdle);
-        }
-
         if (_pendingLaunch != null)
         {
             var l = _pendingLaunch;
             _pendingLaunch = null;
             Dispatcher.BeginInvoke(() => HandleLaunch(l), DispatcherPriority.ApplicationIdle);
         }
-    }
 
-    private void ShowWelcome()
-    {
-        var kind = BackendFactory.Resolve(_app.Settings, _app.ForceSimulation);
-        string text = kind switch
+        // Buscar actualizaciones unos segundos después de arrancar (sin molestar al inicio)
+        if (_app.Settings.CheckUpdates)
         {
-            BackendKind.FanControl => "He encontrado FanControl: usaré tu config y crearé una copia con todo al 100 %. Revisa Ajustes si quieres afinar.",
-            BackendKind.Simulation => "Estás en modo simulación: nada de hardware real, solo vibes.",
-            _ => "No encuentro FanControl, así que usaré el control directo (experimental). Puedes indicar FanControl en Ajustes.",
-        };
-        ShowToast("👋", "¡Bienvenido a FanMaxxxing!", text, TimeSpan.FromSeconds(9));
+            var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
+            t.Tick += async (_, _) =>
+            {
+                t.Stop();
+                await CheckForUpdatesAsync(manual: false);
+            };
+            t.Start();
+        }
     }
 
     /// <summary>Órdenes de línea de comandos (al arrancar o reenviadas por otra instancia).</summary>
@@ -200,6 +197,7 @@ public partial class MainWindow : Window
                 sw.Show();
                 target = (FrameworkElement)sw.Content;
             }
+            if (o.SnapConfirm) _ = AskCloseAsync();
             var t = new DispatcherTimer { Interval = TimeSpan.FromSeconds(o.SnapDelay) };
             t.Tick += (_, _) =>
             {
@@ -212,7 +210,6 @@ public partial class MainWindow : Window
                         dpi.PixelsPerInchX, dpi.PixelsPerInchY, PixelFormats.Pbgra32);
                     if (sw != null)
                     {
-                        // la ventana de ajustes tiene fondo propio: lo pintamos debajo
                         var dv = new DrawingVisual();
                         using (var dc = dv.RenderOpen()) dc.DrawRectangle(sw.Background, null, new Rect(0, 0, target.ActualWidth, target.ActualHeight));
                         bmp.Render(dv);
@@ -229,6 +226,7 @@ public partial class MainWindow : Window
                 Dispatcher.InvokeAsync(async () =>
                 {
                     while (_engine.IsBusy) await Task.Delay(50);
+                    _reallyClosing = true;
                     _app.ExitApp();
                 });
             };
@@ -245,46 +243,33 @@ public partial class MainWindow : Window
             return;
         }
         e.Cancel = true;
-        if (_app.Settings.CloseToTray && _app.HasTray)
-        {
-            HideToTray();
-            return;
-        }
-        _ = RequestExitAsync();
+        _ = AskCloseAsync();
     }
 
-    public void HideToTray()
+    /// <summary>«¿Seguro que quieres cerrar?» y, si se confirma, cierra de verdad.</summary>
+    private async Task AskCloseAsync()
     {
-        Hide();
-        if (!_trayHintShown)
+        if (_closePromptOpen) return;
+        _closePromptOpen = true;
+        try
         {
-            _trayHintShown = true;
-            _app.ShowTrayBalloon("Sigo aquí abajo 👇", IsCooling
-                ? "El enfriamiento continúa. Clic derecho en el icono para más opciones."
-                : "FanMaxxxing está en la bandeja. Clic derecho para enfriar o salir.");
+            BringToFront();
+            bool ok = await ConfirmAsync(Loc.T("confirm.close.title"),
+                _engine.IsBusy ? Loc.T("confirm.close.cooling") : Loc.T("confirm.close.text"),
+                Loc.T("confirm.close.yes"), Loc.T("confirm.close.no"));
+            if (ok) await ExitAsync();
+        }
+        finally
+        {
+            _closePromptOpen = false;
         }
     }
 
-    public void ShowFromTray()
-    {
-        if (!IsVisible) Show();
-        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
-        Activate();
-        Topmost = true;
-        Topmost = false;
-        Focus();
-    }
-
-    /// <summary>Salida "de verdad". Si hay enfriamiento, primero devuelve los ventiladores a la normalidad.</summary>
-    public async Task RequestExitAsync()
+    /// <summary>Sale ya: si hay enfriamiento, primero devuelve los ventiladores a la normalidad.</summary>
+    private async Task ExitAsync()
     {
         if (_engine.IsBusy)
         {
-            ShowFromTray();
-            var r = MessageBox.Show(this,
-                "Hay un enfriamiento en marcha. ¿Lo cancelo, devuelvo los ventiladores a automático y salgo?",
-                "FanMaxxxing", MessageBoxButton.YesNo, MessageBoxImage.Question);
-            if (r != MessageBoxResult.Yes) return;
             _engine.Cancel();
             var deadline = DateTime.UtcNow.AddSeconds(60);
             while (_engine.IsBusy && DateTime.UtcNow < deadline) await Task.Delay(100);
@@ -294,15 +279,27 @@ public partial class MainWindow : Window
         _app.ExitApp();
     }
 
+    public void BringToFront()
+    {
+        if (!IsVisible) Show();
+        if (WindowState == WindowState.Minimized) WindowState = WindowState.Normal;
+        Activate();
+        Topmost = true;
+        Topmost = false;
+        Focus();
+    }
+
     /// <summary>Llamado por App al salir: corta timers y eventos para no dejar nada colgando.</summary>
     public void Teardown()
     {
         _reallyClosing = true;
         _uiTimer.Stop();
         _memeTimer.Stop();
-        _dogeTimer.Stop();
+        _tagTimer.Stop();
         _powerTimer.Stop();
         _toastTimer.Stop();
+        try { _updateCts?.Cancel(); } catch { /* ignorar */ }
+        _confirmTcs?.TrySetResult(false);
         if (_renderHooked)
         {
             CompositionTarget.Rendering -= OnRendering;
@@ -314,10 +311,108 @@ public partial class MainWindow : Window
 
     public void EmergencyRestore() => _engine.EmergencyRestore();
 
-    /// <summary>Windows se está apagando: no hay que esconderse en la bandeja ni bloquear el cierre.</summary>
+    /// <summary>Windows se está apagando (o el instalador nos cierra): no se pregunta nada.</summary>
     public void MarkSessionEnding() => _reallyClosing = true;
 
-    public void CancelCooldown() => _engine.Cancel();
+    // =====================================================================
+    //  Diálogo de confirmación
+    // =====================================================================
+
+    private Task<bool> ConfirmAsync(string title, string text, string yes, string no)
+    {
+        _confirmTcs?.TrySetResult(false);
+        _confirmTcs = new TaskCompletionSource<bool>();
+        ConfirmTitle.Text = title;
+        ConfirmText.Text = text;
+        ConfirmYesText.Text = yes;
+        ConfirmNoText.Text = no;
+        ConfirmOverlay.Visibility = Visibility.Visible;
+        ConfirmNoButton.Focus();
+        return _confirmTcs.Task;
+    }
+
+    private void CloseConfirm(bool result)
+    {
+        ConfirmOverlay.Visibility = Visibility.Collapsed;
+        var tcs = _confirmTcs;
+        _confirmTcs = null;
+        tcs?.TrySetResult(result);
+    }
+
+    private void ConfirmYes_Click(object sender, RoutedEventArgs e) => CloseConfirm(true);
+    private void ConfirmNo_Click(object sender, RoutedEventArgs e) => CloseConfirm(false);
+
+    // =====================================================================
+    //  Actualizaciones
+    // =====================================================================
+
+    /// <summary>Busca una versión nueva en GitHub. Si <paramref name="manual"/>, avisa también cuando no hay.</summary>
+    public async Task CheckForUpdatesAsync(bool manual)
+    {
+        var info = await UpdateChecker.CheckAsync();
+        if (_reallyClosing) return;
+        if (info == null)
+        {
+            if (manual) ShowToast("✔", Loc.T("update.none.title"), Loc.F("update.none.text", UpdateChecker.CurrentVersion.ToString(3)), TimeSpan.FromSeconds(5));
+            return;
+        }
+        _update = info;
+        UpdateText.Text = Loc.F("update.available", info.Version.ToString(3));
+        UpdateInstallText.Text = Loc.T("update.install");
+        UpdateInstallButton.IsEnabled = true;
+        UpdatePanel.Visibility = Visibility.Visible;
+        ShowToast("🚀", Loc.F("update.toast.title", info.Version.ToString(3)), Loc.T("update.toast.text"), TimeSpan.FromSeconds(8));
+    }
+
+    private async void UpdateInstall_Click(object sender, RoutedEventArgs e)
+    {
+        var info = _update;
+        if (info == null) return;
+        if (_engine.IsBusy)
+        {
+            ShowToast("⏳", Loc.T("update.busy.title"), Loc.T("update.busy.text"), TimeSpan.FromSeconds(5));
+            return;
+        }
+        if (info.MsiUrl == null)
+        {
+            UpdateChecker.OpenPage(info.PageUrl);
+            return;
+        }
+
+        UpdateInstallButton.IsEnabled = false;
+        _updateCts = new CancellationTokenSource();
+        var progress = new Progress<double>(p => UpdateInstallText.Text = Loc.F("update.downloading", (int)(p * 100)));
+        try
+        {
+            var path = await UpdateChecker.DownloadAsync(info, progress, _updateCts.Token);
+            UpdateInstallText.Text = Loc.T("update.launching");
+            UpdateChecker.LaunchInstaller(path);
+            // El instalador cerrará la app si sigue abierta; salimos ya para no estorbar.
+            await ExitAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // cerrando la app
+        }
+        catch (Exception ex)
+        {
+            Log.Error("Fallo descargando la actualización", ex);
+            ShowToast("⚠", Loc.T("update.fail.title"), Loc.T("update.fail.text"), TimeSpan.FromSeconds(10), error: true);
+            UpdateInstallText.Text = Loc.T("update.install");
+            UpdateInstallButton.IsEnabled = true;
+            UpdateChecker.OpenPage(info.PageUrl);
+        }
+        finally
+        {
+            _updateCts?.Dispose();
+            _updateCts = null;
+        }
+    }
+
+    private void UpdateNotes_Click(object sender, RoutedEventArgs e)
+        => UpdateChecker.OpenPage(_update?.PageUrl ?? UpdateChecker.ReleasesPage);
+
+    private void UpdateLater_Click(object sender, RoutedEventArgs e) => UpdatePanel.Visibility = Visibility.Collapsed;
 
     // =====================================================================
     //  Bucle de animación (uno solo, y solo mientras la ventana se ve)
@@ -332,13 +427,14 @@ public partial class MainWindow : Window
             CompositionTarget.Rendering += OnRendering;
             _renderHooked = true;
             if (_loaded) _memeTimer.Start();
+            if (_engine.Phase == CooldownPhase.Cooling) _tagTimer.Start();
         }
         else if (!shouldRun && _renderHooked)
         {
             CompositionTarget.Rendering -= OnRendering;
             _renderHooked = false;
             _memeTimer.Stop();
-            _dogeTimer.Stop();
+            _tagTimer.Stop();
             Particles.Clear();
         }
     }
@@ -361,7 +457,6 @@ public partial class MainWindow : Window
 
         Fan.Advance(dt);
 
-        // Suavizados
         _heat += (_targetHeat - _heat) * Math.Min(1, dt * 0.8);
         _wind += (_targetWind - _wind) * Math.Min(1, dt * 1.5);
         Fan.SetHeat(_heat);
@@ -373,7 +468,6 @@ public partial class MainWindow : Window
 
         LogoSpin.Angle = (LogoSpin.Angle + Fan.CurrentSpeed * dt * 0.5) % 360;
 
-        // Temblor de pantalla al arrancar la turbina
         if (_shakeLeft > 0)
         {
             _shakeLeft -= dt;
@@ -386,7 +480,6 @@ public partial class MainWindow : Window
             ShakeTransform.X = ShakeTransform.Y = 0;
         }
 
-        // Latido del botón cuando está esperando
         double pulse = _engine.IsBusy ? 1 : 1 + 0.018 * Math.Sin(_time * 3.2);
         MainButtonScale.ScaleX = MainButtonScale.ScaleY = pulse;
 
@@ -432,7 +525,7 @@ public partial class MainWindow : Window
         if (s.FanRpm is double rpm)
         {
             RpmText.Text = $"{rpm:0} RPM";
-            RpmLabel.Text = "ventilador más rápido";
+            RpmLabel.Text = Loc.T("main.rpm.label");
         }
         else
         {
@@ -440,14 +533,13 @@ public partial class MainWindow : Window
             RpmLabel.Text = "";
         }
 
-        // Calor objetivo para colores/partículas
         if (s.MaxTemp is double t) _targetHeat = Math.Clamp((t - 38) / 40, 0, 1);
         else if (!_engine.IsBusy) _targetHeat = DateTime.UtcNow < _doneUntil ? 0.1 : 0.45;
 
         if (!_engine.IsBusy && !IsPowerPending)
         {
             Fan.SetMood(FanMoodNow(s));
-            if (DateTime.UtcNow < _doneUntil && !_lastRunFailed) Fan.SetHub("OK", "FRESQUITO");
+            if (DateTime.UtcNow < _doneUntil && !_lastRunFailed) Fan.SetHub("OK", Loc.T("hub.cool"));
             else if (s.MaxTemp is double mt) Fan.SetHub($"{mt:0}°", "AUTO");
             else Fan.SetHub("AUTO", "");
             Particles.Mode = _targetHeat > 0.45 ? ParticleMode.Embers : ParticleMode.None;
@@ -484,19 +576,15 @@ public partial class MainWindow : Window
     {
         if (_engine.IsBusy) return;
         int min = _app.Settings.DurationMinutes;
+        var after = _app.Settings.AfterAction;
         TimerText.Text = $"{min:00}:00";
-        string after = _app.Settings.AfterAction switch
-        {
-            AfterAction.Shutdown => " y luego apago el PC",
-            AfterAction.Hibernate => " y luego hiberno el PC",
-            AfterAction.Sleep => " y luego lo suspendo",
-            _ => "",
-        };
         if (DateTime.UtcNow > _doneUntil)
-            StatusText.Text = $"Listo para maxxear: {min} min con todo al 100 %{after}.";
-        MainButtonSub.Text = _app.Settings.AfterAction == AfterAction.Nothing
-            ? $"ventiladores al 100 % · {min} min"
-            : $"{min} min al 100 % y {PowerActions.Describe(_app.Settings.AfterAction)}";
+            StatusText.Text = after == AfterAction.Nothing
+                ? Loc.F("status.ready", min)
+                : Loc.F("status.ready.then", min, PowerActions.Describe(after));
+        MainButtonSub.Text = after == AfterAction.Nothing
+            ? Loc.F("main.button.sub", min)
+            : Loc.F("main.button.sub.then", min, PowerActions.Describe(after));
     }
 
     public void RefreshBackendStatus()
@@ -512,7 +600,6 @@ public partial class MainWindow : Window
                 ? (backend.Kind == BackendKind.Simulation ? (Brush)FindResource("Yellow") : (Brush)FindResource("Lime"))
                 : (Brush)FindResource("Danger");
             SimBadge.Visibility = backend.Kind == BackendKind.Simulation ? Visibility.Visible : Visibility.Collapsed;
-            _app.SetTrayTooltip($"FanMaxxxing · {st.Title}");
         }
         catch (Exception ex)
         {
@@ -523,7 +610,7 @@ public partial class MainWindow : Window
     private void RefreshRank()
     {
         var (rank, next) = Memes.RankFor(_app.Settings.Stats.TotalCooldowns);
-        RankText.Text = rank.ToUpperInvariant();
+        RankText.Text = rank.ToUpper(System.Globalization.CultureInfo.CurrentUICulture);
         RankNext.Text = next;
     }
 
@@ -575,7 +662,7 @@ public partial class MainWindow : Window
         FlashScale.BeginAnimation(ScaleTransform.ScaleYProperty, scale);
     }
 
-    private void SpawnDoge()
+    private void SpawnTag()
     {
         if (_app.Settings.ReducedAnimations || !_renderHooked) return;
         double w = DogeCanvas.ActualWidth, h = DogeCanvas.ActualHeight;
@@ -603,11 +690,11 @@ public partial class MainWindow : Window
         Canvas.SetLeft(tag, x);
         Canvas.SetTop(tag, y);
         ((RotateTransform)tag.RenderTransform).Angle = _rng.Next(-8, 9);
-        tag.BeginAnimation(OpacityProperty, DogeFade);
+        tag.BeginAnimation(OpacityProperty, TagFade);
     }
 
     /// <summary>Aparece rápido, se mantiene y se desvanece. Congelada y compartida por todo el pool.</summary>
-    private static AnimationTimeline MakeDogeFade()
+    private static AnimationTimeline MakeTagFade()
     {
         var kf = new DoubleAnimationUsingKeyFrames { Duration = TimeSpan.FromSeconds(2.6) };
         kf.KeyFrames.Add(new LinearDoubleKeyFrame(0, KeyTime.FromPercent(0)));
@@ -655,7 +742,7 @@ public partial class MainWindow : Window
         return b;
     }
 
-    private static T Freeze<T>(T f) where T : Freezable
+    private static TF Freeze<TF>(TF f) where TF : Freezable
     {
         f.Freeze();
         return f;
@@ -695,7 +782,7 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             Log.Error("No se pudo crear el motor", ex);
-            ShowToast("⚠", "No puedo arrancar", ex.Message, error: true);
+            ShowToast("⚠", Loc.T("toast.cantstart"), ex.Message, error: true);
             return;
         }
 
@@ -716,10 +803,9 @@ public partial class MainWindow : Window
         _lastRunFailed = false;
         _doneUntil = DateTime.MinValue;
 
-        // Fiesta
         _app.Sound.PlayTurbine();
         _shakeLeft = 0.8;
-        Flash("LOCK IN.");
+        Flash(Loc.T("flash.start"));
         Fan.SetMood(FanMood.Excited);
         Fan.TargetSpeed = 1500;
         Fan.Vibration = 1;
@@ -727,7 +813,7 @@ public partial class MainWindow : Window
         Particles.Mode = ParticleMode.Snow;
         Particles.Intensity = 1;
         ShowMeme(MemeMood.Cooling, force: true);
-        if (_renderHooked) _dogeTimer.Start();
+        if (_renderHooked) _tagTimer.Start();
 
         var duration = _debugDuration ?? TimeSpan.FromMinutes(minutes);
         // En enfriamientos cortos (1-2 min) el mínimo para la parada inteligente no puede pasar del 60 % del total
@@ -776,35 +862,34 @@ public partial class MainWindow : Window
             case CooldownPhase.Starting:
                 MainButton.IsEnabled = false;
                 MainButton.Background = BusyButtonBrush;
-                MainButtonText.Text = "DESPEGANDO…";
-                MainButtonSub.Text = "hablando con los ventiladores";
-                StatusText.Text = "Arrancando turbinas…";
-                Fan.SetHub("MAX", "ARRANCANDO");
+                MainButtonText.Text = Loc.T("main.button.starting");
+                MainButtonSub.Text = Loc.T("main.button.starting.sub");
+                StatusText.Text = Loc.T("status.starting");
+                Fan.SetHub("MAX", Loc.T("hub.starting"));
                 SetPillsEnabled(false);
-                _app.SetTrayTooltip("FanMaxxxing · arrancando turbinas");
                 break;
             case CooldownPhase.Cooling:
                 MainButton.IsEnabled = true;
                 MainButton.Background = CancelButtonBrush;
-                MainButtonText.Text = "CANCELAR";
-                MainButtonSub.Text = "y volver a automático";
+                MainButtonText.Text = Loc.T("main.button.cancel");
+                MainButtonSub.Text = Loc.T("main.button.cancel.sub");
                 break;
             case CooldownPhase.Restoring:
                 MainButton.IsEnabled = false;
                 MainButton.Background = BusyButtonBrush;
-                MainButtonText.Text = "ATERRIZANDO…";
-                MainButtonSub.Text = "devolviendo ventiladores a automático";
-                StatusText.Text = "Devolviendo los ventiladores a automático…";
+                MainButtonText.Text = Loc.T("main.button.landing");
+                MainButtonSub.Text = Loc.T("main.button.landing.sub");
+                StatusText.Text = Loc.T("status.restoring");
                 Fan.TargetSpeed = 220;
                 Fan.Vibration = 0;
-                Fan.SetHub("AUTO", "VOLVIENDO");
+                Fan.SetHub("AUTO", Loc.T("hub.restoring"));
                 _targetWind = 0;
-                _dogeTimer.Stop();
+                _tagTimer.Stop();
                 break;
             case CooldownPhase.Idle:
                 MainButton.IsEnabled = true;
                 MainButton.Background = IdleButtonBrush;
-                MainButtonText.Text = "MAXXEAR";
+                MainButtonText.Text = Loc.T("main.button.start");
                 Fan.TargetSpeed = 40;
                 Fan.SetProgress(0);
                 SetPillsEnabled(true);
@@ -821,12 +906,11 @@ public partial class MainWindow : Window
         string temps = "";
         if (t.Sensors.CpuTemp is double c) temps += $"CPU {c:0}°";
         if (t.Sensors.GpuTemp is double g) temps += (temps.Length > 0 ? " · " : "") + $"GPU {g:0}°";
-        string status = "Ventiladores al 100 %. " + (temps.Length > 0 ? temps + "." : "");
-        if (t.SmartStopPending) status += " Casi frío: si se mantiene, paro antes.";
-        else if (_runAfter != AfterAction.Nothing) status += $" Al acabar: {PowerActions.Describe(_runAfter)}.";
+        string status = Loc.T("status.cooling") + (temps.Length > 0 ? " " + temps + "." : "");
+        if (t.SmartStopPending) status += " " + Loc.T("status.smartpending");
+        else if (_runAfter != AfterAction.Nothing) status += " " + Loc.F("status.then", PowerActions.Describe(_runAfter));
         StatusText.Text = status;
 
-        // Mientras enfría, la cara pasa de emocionada a feliz al final
         Fan.SetMood(t.Progress > 0.8 ? FanMood.Happy : FanMood.Excited);
         Fan.SetHub("MAX", t.Sensors.FanRpm is double rpm ? $"{rpm:0} RPM" : "100 %");
 
@@ -835,8 +919,6 @@ public partial class MainWindow : Window
             _displayOffDone = true;
             PowerActions.TurnOffDisplay(new WindowInteropHelper(this).EnsureHandle());
         }
-
-        _app.SetTrayTooltip($"FanMaxxxing · enfriando, quedan {TimerText.Text}");
     }
 
     private void OnCooldownFinished(CooldownResult r)
@@ -851,8 +933,7 @@ public partial class MainWindow : Window
 
         if (r.RestoreError != null)
         {
-            ShowToast("⚠", "Ojo: no he podido volver a la config normal",
-                r.RestoreError + " Abre FanControl y carga tu config a mano (lo reintentaré al volver a abrir FanMaxxxing).",
+            ShowToast("⚠", Loc.T("toast.restorefail.title"), r.RestoreError + " " + Loc.T("toast.restorefail.text"),
                 TimeSpan.FromSeconds(15), error: true);
         }
 
@@ -863,15 +944,15 @@ public partial class MainWindow : Window
                 _app.Sound.PlayBoop();
                 Fan.SetMood(FanMood.Neutral);
                 ShowMeme(MemeMood.Error, force: true);
-                StatusText.Text = "No se pudo enfriar: " + r.Error;
-                if (r.RestoreError == null) ShowToast("⚠", "Algo ha fallado", r.Error ?? "Error desconocido", error: true);
+                StatusText.Text = Loc.F("status.failed", r.Error);
+                if (r.RestoreError == null) ShowToast("⚠", Loc.T("toast.failed"), r.Error ?? "?", error: true);
                 return;
 
             case CooldownEnd.Cancelled:
-                StatusText.Text = "Cancelado. Ventiladores de vuelta en automático. " + temps;
+                StatusText.Text = Loc.T("status.cancelled") + " " + temps;
                 _doneUntil = DateTime.UtcNow;
                 ShowMeme(MemeMoodNow(), force: true);
-                if (r.RestoreError == null) ShowToast("✋", "Cancelado", "Los ventiladores vuelven a su curva normal.", TimeSpan.FromSeconds(4));
+                if (r.RestoreError == null) ShowToast("✋", Loc.T("toast.cancelled.title"), Loc.T("toast.cancelled.text"), TimeSpan.FromSeconds(4));
                 return;
         }
 
@@ -889,18 +970,16 @@ public partial class MainWindow : Window
         Fan.SetMood(FanMood.Happy);
         ShowMeme(MemeMood.Done, force: true);
         Particles.Confetti(_app.Settings.ReducedAnimations ? 40 : 110);
-        Flash("+1000 AURA");
+        Flash(Loc.T("flash.done"));
         _app.Sound.PlayChime();
-        StatusText.Text = (r.End == CooldownEnd.SmartStop ? "Ya estaba todo frío: he parado antes. " : "¡Hecho! ") + temps;
+        StatusText.Text = (r.End == CooldownEnd.SmartStop ? Loc.T("status.done.smart") : Loc.T("status.done")) + " " + temps;
 
         var (title, sub) = Memes.Achievement(r);
         if (r.RestoreError == null)
-            ShowToast("🏆", "LOGRO DESBLOQUEADO: " + title, sub, TimeSpan.FromSeconds(7));
+            ShowToast("🏆", Loc.F("toast.achievement", title), sub, TimeSpan.FromSeconds(7));
 
         if (_runAfter != AfterAction.Nothing)
             StartPowerCountdown(_runAfter);
-        else
-            _app.ShowTrayBalloonIfHidden(this, "Enfriamiento terminado ❄", temps.Length > 0 ? temps : "Ventiladores de vuelta en automático.");
     }
 
     private static string TempSummary(CooldownResult r)
@@ -919,33 +998,27 @@ public partial class MainWindow : Window
     {
         _powerAction = action;
         _powerLeft = _app.Settings.PowerCountdownSeconds;
-        string verb = action switch
+        string k = action switch
         {
-            AfterAction.Shutdown => "se apagará",
-            AfterAction.Hibernate => "hibernará",
-            _ => "se suspenderá",
+            AfterAction.Shutdown => "shutdown",
+            AfterAction.Hibernate => "hibernate",
+            _ => "sleep",
         };
-        PowerSub.Text = $"El equipo {verb} en";
-        PowerNowText.Text = action switch
-        {
-            AfterAction.Shutdown => "Apagar ya",
-            AfterAction.Hibernate => "Hibernar ya",
-            _ => "Suspender ya",
-        };
+        PowerSub.Text = Loc.T("power.sub." + k);
+        PowerNowText.Text = Loc.T("power.now." + k);
         var night = Memes.Next(MemeMood.Night);
         PowerTitle.Text = night.Top;
-        PowerHint.Text = night.Bottom.ToLowerInvariant() + " · los ventiladores ya están en automático";
+        PowerHint.Text = night.Bottom.ToLower(System.Globalization.CultureInfo.CurrentUICulture) + " · " + Loc.T("power.hint");
         PowerCount.Text = _powerLeft.ToString();
         PowerOverlay.Visibility = Visibility.Visible;
         Fan.SetMood(FanMood.Sleepy);
-        Fan.SetHub("OFF", "BUENAS NOCHES");
+        Fan.SetHub("OFF", Loc.T("hub.night"));
         ShowMeme(MemeMood.Night, force: true);
 
-        // Que se vea aunque esté en la bandeja o detrás de otra ventana
-        ShowFromTray();
+        // Que se vea aunque esté minimizada o detrás de otra ventana
+        BringToFront();
         PowerCancelButton.Focus();
         _powerTimer.Start();
-        _app.SetTrayTooltip($"FanMaxxxing · {verb} en {_powerLeft} s");
     }
 
     private void PowerTimer_Tick(object? sender, EventArgs e)
@@ -971,8 +1044,7 @@ public partial class MainWindow : Window
             // En simulación NUNCA se apaga de verdad.
             Log.Info($"Simulación: aquí se haría '{_powerAction}'");
             PowerOverlay.Visibility = Visibility.Collapsed;
-            ShowToast("🎭", $"(Simulación) Aquí el PC se {(_powerAction == AfterAction.Shutdown ? "apagaría" : _powerAction == AfterAction.Hibernate ? "hibernaría" : "suspendería")}",
-                "En modo simulación no se toca nada de verdad.", TimeSpan.FromSeconds(6));
+            ShowToast("🎭", Loc.F("toast.sim.power", PowerActions.Describe(_powerAction)), Loc.T("toast.sim.power.text"), TimeSpan.FromSeconds(6));
             Fan.SetMood(FanMood.Happy);
             ShowMeme(MemeMoodNow(), force: true);
             return;
@@ -982,20 +1054,19 @@ public partial class MainWindow : Window
         if (err != null)
         {
             PowerOverlay.Visibility = Visibility.Collapsed;
-            ShowToast("⚠", "Windows no me ha dejado", err, error: true);
+            ShowToast("⚠", Loc.T("toast.powerfail"), err, error: true);
             Fan.SetMood(FanMood.Neutral);
             return;
         }
         if (_powerAction == AfterAction.Sleep)
         {
-            // Al volver de la suspensión, quitamos el overlay
             PowerOverlay.Visibility = Visibility.Collapsed;
             ShowMeme(MemeMoodNow(), force: true);
         }
         else
         {
             PowerCount.Text = "zZz";
-            PowerSub.Text = "Apagando… dulces sueños";
+            PowerSub.Text = Loc.T("power.goingdown");
         }
     }
 
@@ -1012,7 +1083,7 @@ public partial class MainWindow : Window
     private void PowerCancel_Click(object sender, RoutedEventArgs e)
     {
         CancelPowerCountdown();
-        ShowToast("😎", "Vale, seguimos despiertos", "El PC ya está fresquito, puedes seguir a lo tuyo.", TimeSpan.FromSeconds(5));
+        ShowToast("😎", Loc.T("toast.awake.title"), Loc.T("toast.awake.text"), TimeSpan.FromSeconds(5));
     }
 
     private void PowerNow_Click(object sender, RoutedEventArgs e)
@@ -1032,7 +1103,7 @@ public partial class MainWindow : Window
         SelectDuration(_app.Settings.DurationMinutes);
         SelectAfter(_app.Settings.AfterAction);
         SmartStopCheck.IsChecked = _app.Settings.SmartStop;
-        SmartStopText.Text = $"Parar antes si ya está todo frío (CPU ≤ {_app.Settings.SmartStopCpuTemp:0}° y GPU ≤ {_app.Settings.SmartStopGpuTemp:0}°)";
+        SmartStopText.Text = Loc.F("main.smartstop", _app.Settings.SmartStopCpuTemp.ToString("0"), _app.Settings.SmartStopGpuTemp.ToString("0"));
         SoundButton.Content = _app.Settings.SoundEnabled ? "" : "";
         _suppressPillEvents = false;
         UpdateIdleTexts();
@@ -1051,14 +1122,14 @@ public partial class MainWindow : Window
         {
             foreach (var rb in DurationPanel.Children.OfType<RadioButton>())
                 if ((string)rb.Tag == minutes.ToString()) rb.IsChecked = true;
-            CustomDurationPill.Content = "Personalizado";
+            CustomDurationPill.Content = Loc.T("main.custom");
             CustomDurationRow.Visibility = Visibility.Collapsed;
         }
         else
         {
             CustomDurationSlider.Value = Math.Max(6, minutes);
             CustomDurationPill.IsChecked = true;
-            CustomDurationPill.Content = $"Personalizado · {minutes} min";
+            CustomDurationPill.Content = Loc.F("main.custom.value", minutes);
             CustomDurationText.Text = $"{minutes} min";
             CustomDurationRow.Visibility = Visibility.Visible;
         }
@@ -1071,7 +1142,7 @@ public partial class MainWindow : Window
         int m = (int)e.NewValue;
         CustomDurationText.Text = $"{m} min";
         if (_suppressPillEvents || CustomDurationPill.IsChecked != true) return;
-        CustomDurationPill.Content = $"Personalizado · {m} min";
+        CustomDurationPill.Content = Loc.F("main.custom.value", m);
         _app.Settings.DurationMinutes = m;
         _app.SaveSettings();
         UpdateIdleTexts();
@@ -1099,13 +1170,13 @@ public partial class MainWindow : Window
         if ((string)rb.Tag == "custom")
         {
             m = (int)CustomDurationSlider.Value;
-            rb.Content = $"Personalizado · {m} min";
+            rb.Content = Loc.F("main.custom.value", m);
             CustomDurationRow.Visibility = Visibility.Visible;
         }
         else
         {
             m = int.Parse((string)rb.Tag);
-            CustomDurationPill.Content = "Personalizado";
+            CustomDurationPill.Content = Loc.T("main.custom");
             CustomDurationRow.Visibility = Visibility.Collapsed;
         }
         _app.Settings.DurationMinutes = m;
@@ -1123,8 +1194,8 @@ public partial class MainWindow : Window
             _app.SaveSettings();
             UpdateIdleTexts();
             if (a != AfterAction.Nothing && !_engine.IsBusy)
-                ShowToast("🌙", $"Al terminar: {PowerActions.Describe(a)}",
-                    $"Habrá una cuenta atrás de {_app.Settings.PowerCountdownSeconds} s para arrepentirte.", TimeSpan.FromSeconds(4));
+                ShowToast("🌙", Loc.F("toast.after.title", PowerActions.Describe(a)),
+                    Loc.F("toast.after.text", _app.Settings.PowerCountdownSeconds), TimeSpan.FromSeconds(4));
         }
     }
 
@@ -1150,24 +1221,12 @@ public partial class MainWindow : Window
         _ = StartCooldownAsync(_app.Settings.DurationMinutes, _app.Settings.AfterAction);
     }
 
-    /// <summary>Para el menú de la bandeja.</summary>
-    public void StartFromTray(AfterAction? after)
-    {
-        if (_engine.IsBusy) return;
-        var a = after ?? _app.Settings.AfterAction;
-        _suppressPillEvents = true;
-        SelectAfter(a);
-        _suppressPillEvents = false;
-        _ = StartCooldownAsync(_app.Settings.DurationMinutes, a);
-    }
-
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape)
-        {
-            if (IsPowerPending) { CancelPowerCountdown(); e.Handled = true; }
-            else if (_engine.Phase == CooldownPhase.Cooling) { _engine.Cancel(); e.Handled = true; }
-        }
+        if (e.Key != Key.Escape) return;
+        if (ConfirmOverlay.Visibility == Visibility.Visible) { CloseConfirm(false); e.Handled = true; }
+        else if (IsPowerPending) { CancelPowerCountdown(); e.Handled = true; }
+        else if (_engine.Phase == CooldownPhase.Cooling) { _engine.Cancel(); e.Handled = true; }
     }
 
     private void SoundButton_Click(object sender, RoutedEventArgs e)
@@ -1179,21 +1238,36 @@ public partial class MainWindow : Window
         if (_app.Settings.SoundEnabled) _app.Sound.PlayBoop();
     }
 
-    private void SettingsButton_Click(object sender, RoutedEventArgs e)
+    private async void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
         if (_engine.IsBusy)
         {
-            ShowToast("⏳", "Espera a que termine", "Los ajustes se pueden cambiar cuando no se está enfriando.", TimeSpan.FromSeconds(4));
+            ShowToast("⏳", Loc.T("toast.wait.title"), Loc.T("toast.wait.text"), TimeSpan.FromSeconds(4));
             return;
         }
         var win = new SettingsWindow(_app) { Owner = this };
-        if (win.ShowDialog() == true)
+        if (win.ShowDialog() != true) return;
+
+        string oldLang = Loc.Current;
+        _app.ApplyNewSettings(win.Result!);
+        ApplySettingsToUi();
+        RefreshBackendStatus();
+        RefreshRank();
+        SimBadge.Visibility = _app.ForceSimulation || _app.Settings.Backend == BackendKind.Simulation ? Visibility.Visible : Visibility.Collapsed;
+
+        if (win.CheckUpdatesNow) await CheckForUpdatesAsync(manual: true);
+
+        // El idioma se aplica reiniciando la app
+        if (Loc.Resolve(_app.Settings.Language) != oldLang)
         {
-            _app.ApplyNewSettings(win.Result!);
-            ApplySettingsToUi();
-            RefreshBackendStatus();
-            RefreshRank();
-            SimBadge.Visibility = _app.ForceSimulation || _app.Settings.Backend == BackendKind.Simulation ? Visibility.Visible : Visibility.Collapsed;
+            Loc.Init(_app.Settings.Language);
+            bool restart = await ConfirmAsync(Loc.T("confirm.restart.title"), Loc.T("confirm.restart.text"),
+                Loc.T("confirm.restart.yes"), Loc.T("confirm.restart.no"));
+            if (restart)
+            {
+                _reallyClosing = true;
+                _app.Restart();
+            }
         }
     }
 
