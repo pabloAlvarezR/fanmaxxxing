@@ -36,7 +36,7 @@ public sealed class Stats
 public sealed class AppSettings
 {
     // --- Enfriamiento ---
-    public int DurationMinutes { get; set; } = 5;
+    public int DurationMinutes { get; set; } = 3;
     public AfterAction AfterAction { get; set; } = AfterAction.Nothing;
     public bool SmartStop { get; set; } = true;
     public double SmartStopCpuTemp { get; set; } = 45;

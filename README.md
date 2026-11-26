@@ -1,12 +1,12 @@
 # FanMaxxxing 🌀❄
 
-**Enfriador post-vicio para Windows 10/11.** Al terminar de jugar pone los ventiladores de CPU y GPU al 100 % unos minutos para sacar el calor residual. Si quieres, después apaga el PC. Viene con memes, partículas, un ventilador con cara y rangos de pingüino.
+**Enfriador post-vicio para Windows 10/11.** Al terminar de jugar pone los ventiladores de CPU y GPU al 100 % unos minutos para sacar el calor residual. Si quieres, después apaga el PC. Viene con memes actuales (FAAAH, 6 7, aura, la peace, frame-mogging…), un ventilador de PC animado con anillo RGB que cambia de color con la temperatura, partículas y rangos.
 
 ![Enfriando](docs/enfriando.png)
 
 ## Instalación
 
-Copia **`dist\FanMaxxxing-1.0.0-Setup.msi`** al PC (por USB, red o la nube) y ábrelo con doble clic. El asistente está en español y no hace falta instalar .NET ni nada más. Hace esto:
+Copia **`dist\FanMaxxxing-1.1.0-Setup.msi`** al PC (por USB, red o la nube) y ábrelo con doble clic. El asistente está en español y no hace falta instalar .NET ni nada más. Hace esto:
 
 - Instala en `C:\Program Files\FanMaxxxing`.
 - **Menú Inicio** › FanMaxxxing: *FanMaxxxing*, *Enfriar y apagar*, *Enfriar ahora*, *FanMaxxxing (modo simulación)* y *Léeme*.
@@ -19,7 +19,7 @@ Copia **`dist\FanMaxxxing-1.0.0-Setup.msi`** al PC (por USB, red o la nube) y á
 Instalación silenciosa, sin accesos en el escritorio:
 
 ```powershell
-msiexec /i FanMaxxxing-1.0.0-Setup.msi /qb DESKTOPSHORTCUTS=0
+msiexec /i FanMaxxxing-1.1.0-Setup.msi /qb DESKTOPSHORTCUTS=0
 ```
 
 También se puede usar sin instalar: `publish\FanMaxxxing.exe` es portable.
@@ -27,7 +27,7 @@ También se puede usar sin instalar: `publish\FanMaxxxing.exe` es portable.
 ## Cómo se usa
 
 1. Abre **FanMaxxxing** (o *Enfriar y apagar*, que empieza directamente). Pedirá permisos de administrador, igual que FanControl. Para que no pregunte cada vez, activa en Ajustes «Abrir sin que Windows pregunte permisos».
-2. Elige la **duración** (3, 4, 5, 7 o 10 min) y qué hacer **al terminar**: nada, apagar, hibernar o suspender.
+2. Elige la **duración** (1, 2, 3 o 5 min, o **Personalizado** con un deslizador de 6 a 30 min) y qué hacer **al terminar**: nada, apagar, hibernar o suspender.
 3. Pulsa **MAXXEAR**. Ventiladores al 100 %, el PC no se suspende mientras tanto y al acabar todo vuelve a automático.
 4. Si elegiste apagar, sale una cuenta atrás de 30 s (configurable) con un botón **«¡QUIETO! Sigo despierto»** por si te arrepientes.
 
@@ -56,6 +56,13 @@ Para quien no tenga FanControl. Controla los ventiladores de la placa base y de 
 
 Temperaturas de mentira para ver la app sin tocar hardware: `FanMaxxxing.exe --sim`. En simulación **nunca** se apaga el PC de verdad.
 
+## Novedades de la 1.1.0
+
+- Duraciones más realistas: 1, 2, 3 y 5 min, más **Personalizado** (6-30 min). Por defecto, 3 min.
+- Ventilador rediseñado: marco de 120 mm con tornillos, 9 aspas curvadas, brazos del motor, brillo especular, anillo RGB que sigue la temperatura y un display en el buje (temperatura, MAX/RPM, AUTO).
+- Memes actualizados a 2025-2026 y etiquetas flotantes estilo texto de TikTok.
+- La parada inteligente se adapta a enfriamientos cortos.
+
 ## Fiabilidad
 
 - **Siempre vuelve a automático**: la restauración está en un `finally`, así que pasa aunque canceles, haya un error o cierres la app.
@@ -77,7 +84,7 @@ Temperaturas de mentira para ver la app sin tocar hardware: `FanMaxxxing.exe --s
 - **Bandeja del sistema**: clic derecho → «Enfriar ahora» o «Enfriar y apagar».
 - **Iniciar con Windows** y **abrir sin UAC**: crean tareas programadas elevadas, como hace FanControl.
 - **Accesos directos en el escritorio** «Enfriar y apagar» y «Enfriar ahora»: un doble clic antes de irte a dormir y listo.
-- **Rangos**: Tostadora → Microondas → Ventilador de pie → Aire acondicionado → Nevera industrial → Pingüino emperador → Cero absoluto.
+- **Rangos**: Cooked → Medio cooked → NPC del aire → Locked in → Aura farmer → Frame-mogger térmico → La peace absoluta.
 
 ## Línea de comandos
 

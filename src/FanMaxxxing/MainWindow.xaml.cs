@@ -57,13 +57,16 @@ public partial class MainWindow : Window
     private AfterAction _powerAction;
     private bool _trayHintShown;
 
-    // Pool de palabras doge (tamaño fijo)
-    private readonly TextBlock[] _doge = new TextBlock[6];
-    private int _dogeNext;
-    private static readonly Brush[] DogeBrushes =
+    // Pool de etiquetas flotantes estilo texto de TikTok (tamaño fijo)
+    private readonly Border[] _tags = new Border[6];
+    private int _tagNext;
+    private static readonly (Brush Bg, Brush Fg)[] TagStyles =
     {
-        Frozen(Color.FromRgb(0xFF, 0xD6, 0x0A)), Frozen(Color.FromRgb(0x22, 0xD3, 0xEE)), Frozen(Color.FromRgb(0xFF, 0x2E, 0x88)),
-        Frozen(Color.FromRgb(0xA3, 0xFF, 0x12)), Frozen(Color.FromRgb(0xFF, 0x6B, 0x35)), Frozen(Color.FromRgb(0xC0, 0x84, 0xFC)),
+        (Frozen(Colors.White), Frozen(Colors.Black)),
+        (Frozen(Color.FromRgb(0x7C, 0x5C, 0xFF)), Frozen(Colors.White)),
+        (Frozen(Color.FromRgb(0x22, 0xD3, 0xEE)), Frozen(Colors.Black)),
+        (Frozen(Color.FromRgb(0xFF, 0x2E, 0x88)), Frozen(Colors.White)),
+        (Frozen(Color.FromRgb(0xFF, 0xD6, 0x0A)), Frozen(Colors.Black)),
     };
 
     private static readonly Brush IdleButtonBrush = MakeGradient("#22D3EE", "#7C5CFF", "#FF2E88");
@@ -93,17 +96,19 @@ public partial class MainWindow : Window
         _engine.PhaseChanged += Engine_PhaseChanged;
         _engine.Ticked += Engine_Ticked;
 
-        for (int i = 0; i < _doge.Length; i++)
+        var tagFont = new FontFamily("Segoe UI Black, Segoe UI");
+        for (int i = 0; i < _tags.Length; i++)
         {
-            var tb = new TextBlock
+            var tag = new Border
             {
-                FontFamily = new FontFamily("Comic Sans MS"),
-                FontWeight = FontWeights.Bold,
+                CornerRadius = new CornerRadius(7),
+                Padding = new Thickness(10, 3, 10, 5),
                 Opacity = 0,
                 RenderTransform = new RotateTransform(),
+                Child = new TextBlock { FontFamily = tagFont, FontWeight = FontWeights.Black },
             };
-            _doge[i] = tb;
-            DogeCanvas.Children.Add(tb);
+            _tags[i] = tag;
+            DogeCanvas.Children.Add(tag);
         }
 
         Loaded += OnLoaded;
@@ -442,6 +447,9 @@ public partial class MainWindow : Window
         if (!_engine.IsBusy && !IsPowerPending)
         {
             Fan.SetMood(FanMoodNow(s));
+            if (DateTime.UtcNow < _doneUntil && !_lastRunFailed) Fan.SetHub("OK", "FRESQUITO");
+            else if (s.MaxTemp is double mt) Fan.SetHub($"{mt:0}°", "AUTO");
+            else Fan.SetHub("AUTO", "");
             Particles.Mode = _targetHeat > 0.45 ? ParticleMode.Embers : ParticleMode.None;
             Particles.Intensity = Math.Clamp((_targetHeat - 0.35) * 1.6, 0.15, 1);
             var mood = MemeMoodNow();
@@ -573,18 +581,29 @@ public partial class MainWindow : Window
         double w = DogeCanvas.ActualWidth, h = DogeCanvas.ActualHeight;
         if (w < 100 || h < 100) return;
 
-        var tb = _doge[_dogeNext];
-        _dogeNext = (_dogeNext + 1) % _doge.Length;
-        tb.Text = Memes.NextDoge();
-        tb.FontSize = 22 + _rng.Next(16);
-        tb.Foreground = DogeBrushes[_rng.Next(DogeBrushes.Length)];
-        // Por la zona del escenario (izquierda), sin tapar el centro del ventilador
-        double x = 40 + _rng.NextDouble() * Math.Max(50, w * 0.5 - 160);
-        double y = 90 + _rng.NextDouble() * Math.Max(50, h - 260);
-        Canvas.SetLeft(tb, x);
-        Canvas.SetTop(tb, y);
-        ((RotateTransform)tb.RenderTransform).Angle = _rng.Next(-18, 18);
-        tb.BeginAnimation(OpacityProperty, DogeFade);
+        var tag = _tags[_tagNext];
+        _tagNext = (_tagNext + 1) % _tags.Length;
+        var tb = (TextBlock)tag.Child;
+        var (bg, fg) = TagStyles[_rng.Next(TagStyles.Length)];
+        tb.Text = Memes.NextTag();
+        tb.FontSize = 18 + _rng.Next(10);
+        tb.Foreground = fg;
+        tag.Background = bg;
+        // Por los laterales del escenario (columna izquierda), sin tapar el ventilador ni el panel derecho
+        var ft = new FormattedText(tb.Text, System.Globalization.CultureInfo.CurrentUICulture, FlowDirection.LeftToRight,
+            new Typeface(tb.FontFamily, FontStyles.Normal, FontWeights.Black, FontStretches.Normal), tb.FontSize, Brushes.White,
+            VisualTreeHelper.GetDpi(this).PixelsPerDip);
+        double tagW = ft.WidthIncludingTrailingWhitespace + tag.Padding.Left + tag.Padding.Right + 10;
+        double stageLeft = 34, stageRight = w - 18 - 430 - 18 - 16; // márgenes + panel derecho de 430 px
+        bool leftSide = _rng.Next(2) == 0;
+        double x = leftSide
+            ? stageLeft + _rng.NextDouble() * 70
+            : Math.Max(stageLeft, stageRight - tagW - _rng.NextDouble() * 70);
+        double y = 120 + _rng.NextDouble() * Math.Max(50, h - 320);
+        Canvas.SetLeft(tag, x);
+        Canvas.SetTop(tag, y);
+        ((RotateTransform)tag.RenderTransform).Angle = _rng.Next(-8, 9);
+        tag.BeginAnimation(OpacityProperty, DogeFade);
     }
 
     /// <summary>Aparece rápido, se mantiene y se desvanece. Congelada y compartida por todo el pool.</summary>
@@ -700,7 +719,7 @@ public partial class MainWindow : Window
         // Fiesta
         _app.Sound.PlayTurbine();
         _shakeLeft = 0.8;
-        Flash("MODO TURBINA ACTIVADO");
+        Flash("LOCK IN.");
         Fan.SetMood(FanMood.Excited);
         Fan.TargetSpeed = 1500;
         Fan.Vibration = 1;
@@ -710,8 +729,10 @@ public partial class MainWindow : Window
         ShowMeme(MemeMood.Cooling, force: true);
         if (_renderHooked) _dogeTimer.Start();
 
-        var req = new CooldownRequest(_debugDuration ?? TimeSpan.FromMinutes(minutes), s.SmartStop, s.SmartStopCpuTemp, s.SmartStopGpuTemp,
-            TimeSpan.FromSeconds(s.SmartStopMinSeconds));
+        var duration = _debugDuration ?? TimeSpan.FromMinutes(minutes);
+        // En enfriamientos cortos (1-2 min) el mínimo para la parada inteligente no puede pasar del 60 % del total
+        var smartMin = TimeSpan.FromSeconds(Math.Min(s.SmartStopMinSeconds, duration.TotalSeconds * 0.6));
+        var req = new CooldownRequest(duration, s.SmartStop, s.SmartStopCpuTemp, s.SmartStopGpuTemp, smartMin);
 
         CooldownResult result;
         try
@@ -758,6 +779,7 @@ public partial class MainWindow : Window
                 MainButtonText.Text = "DESPEGANDO…";
                 MainButtonSub.Text = "hablando con los ventiladores";
                 StatusText.Text = "Arrancando turbinas…";
+                Fan.SetHub("MAX", "ARRANCANDO");
                 SetPillsEnabled(false);
                 _app.SetTrayTooltip("FanMaxxxing · arrancando turbinas");
                 break;
@@ -775,6 +797,7 @@ public partial class MainWindow : Window
                 StatusText.Text = "Devolviendo los ventiladores a automático…";
                 Fan.TargetSpeed = 220;
                 Fan.Vibration = 0;
+                Fan.SetHub("AUTO", "VOLVIENDO");
                 _targetWind = 0;
                 _dogeTimer.Stop();
                 break;
@@ -805,6 +828,7 @@ public partial class MainWindow : Window
 
         // Mientras enfría, la cara pasa de emocionada a feliz al final
         Fan.SetMood(t.Progress > 0.8 ? FanMood.Happy : FanMood.Excited);
+        Fan.SetHub("MAX", t.Sensors.FanRpm is double rpm ? $"{rpm:0} RPM" : "100 %");
 
         if (_app.Settings.TurnOffDisplay && !_displayOffDone && t.Elapsed.TotalSeconds > 8)
         {
@@ -865,6 +889,7 @@ public partial class MainWindow : Window
         Fan.SetMood(FanMood.Happy);
         ShowMeme(MemeMood.Done, force: true);
         Particles.Confetti(_app.Settings.ReducedAnimations ? 40 : 110);
+        Flash("+1000 AURA");
         _app.Sound.PlayChime();
         StatusText.Text = (r.End == CooldownEnd.SmartStop ? "Ya estaba todo frío: he parado antes. " : "¡Hecho! ") + temps;
 
@@ -913,6 +938,7 @@ public partial class MainWindow : Window
         PowerCount.Text = _powerLeft.ToString();
         PowerOverlay.Visibility = Visibility.Visible;
         Fan.SetMood(FanMood.Sleepy);
+        Fan.SetHub("OFF", "BUENAS NOCHES");
         ShowMeme(MemeMood.Night, force: true);
 
         // Que se vea aunque esté en la bandeja o detrás de otra ventana
@@ -1012,23 +1038,43 @@ public partial class MainWindow : Window
         UpdateIdleTexts();
     }
 
+    private static readonly int[] PresetDurations = { 1, 2, 3, 5 };
+
+    /// <summary>Marca la pastilla de esa duración; si no es 1/2/3/5, usa «Personalizado».</summary>
     private void SelectDuration(int minutes)
     {
-        RadioButton? best = null;
-        int bestDiff = int.MaxValue;
-        foreach (var rb in DurationPanel.Children.OfType<RadioButton>())
+        minutes = Math.Clamp(minutes, 1, 30);
+        _app.Settings.DurationMinutes = minutes;
+        bool wasSuppressed = _suppressPillEvents;
+        _suppressPillEvents = true;
+        if (PresetDurations.Contains(minutes))
         {
-            int v = int.Parse((string)rb.Tag);
-            int diff = Math.Abs(v - minutes);
-            if (diff < bestDiff) { best = rb; bestDiff = diff; }
+            foreach (var rb in DurationPanel.Children.OfType<RadioButton>())
+                if ((string)rb.Tag == minutes.ToString()) rb.IsChecked = true;
+            CustomDurationPill.Content = "Personalizado";
+            CustomDurationRow.Visibility = Visibility.Collapsed;
         }
-        if (best != null)
+        else
         {
-            // Si la duración no es una de las pastillas, la mostramos en la más cercana pero respetamos el valor
-            if (bestDiff != 0) best.Content = $"{minutes} min";
-            best.IsChecked = true;
-            _app.Settings.DurationMinutes = minutes;
+            CustomDurationSlider.Value = Math.Max(6, minutes);
+            CustomDurationPill.IsChecked = true;
+            CustomDurationPill.Content = $"Personalizado · {minutes} min";
+            CustomDurationText.Text = $"{minutes} min";
+            CustomDurationRow.Visibility = Visibility.Visible;
         }
+        _suppressPillEvents = wasSuppressed;
+    }
+
+    private void CustomDuration_Changed(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (CustomDurationText == null || CustomDurationPill == null) return; // durante InitializeComponent
+        int m = (int)e.NewValue;
+        CustomDurationText.Text = $"{m} min";
+        if (_suppressPillEvents || CustomDurationPill.IsChecked != true) return;
+        CustomDurationPill.Content = $"Personalizado · {m} min";
+        _app.Settings.DurationMinutes = m;
+        _app.SaveSettings();
+        UpdateIdleTexts();
     }
 
     private void SelectAfter(AfterAction a)
@@ -1041,6 +1087,7 @@ public partial class MainWindow : Window
     private void SetPillsEnabled(bool enabled)
     {
         DurationPanel.IsEnabled = enabled;
+        CustomDurationRow.IsEnabled = enabled;
         SmartStopCheck.IsEnabled = enabled;
         // "Al terminar" se puede cambiar en pleno enfriamiento
     }
@@ -1048,13 +1095,22 @@ public partial class MainWindow : Window
     private void Duration_Checked(object sender, RoutedEventArgs e)
     {
         if (sender is not RadioButton rb || _suppressPillEvents) return;
-        var text = ((string)rb.Content).Replace(" min", "");
-        if (int.TryParse(text, out var m))
+        int m;
+        if ((string)rb.Tag == "custom")
         {
-            _app.Settings.DurationMinutes = m;
-            _app.SaveSettings();
-            UpdateIdleTexts();
+            m = (int)CustomDurationSlider.Value;
+            rb.Content = $"Personalizado · {m} min";
+            CustomDurationRow.Visibility = Visibility.Visible;
         }
+        else
+        {
+            m = int.Parse((string)rb.Tag);
+            CustomDurationPill.Content = "Personalizado";
+            CustomDurationRow.Visibility = Visibility.Collapsed;
+        }
+        _app.Settings.DurationMinutes = m;
+        _app.SaveSettings();
+        UpdateIdleTexts();
     }
 
     private void After_Checked(object sender, RoutedEventArgs e)

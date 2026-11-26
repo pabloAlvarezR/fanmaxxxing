@@ -4,78 +4,82 @@ public enum MemeMood { IdleHot, IdleCool, Cooling, Done, Night, Error }
 
 public readonly record struct Meme(string Top, string Bottom);
 
-/// <summary>Contenido humorístico. Formato clásico: texto arriba / texto abajo.</summary>
+/// <summary>
+/// Contenido humorístico (memes de 2025-2026). Formato clásico: texto arriba / remate abajo.
+/// Referencias: FAAAH, 6 7, cooked / let him cook, aura, -maxxing, frame-mogging, la peace,
+/// say wallahi bro, Mbappé special, "why would I deceive you?", "he is 20 years old",
+/// IM GOOD BRO, canon event, ROW!, kinda chic, locked in, Tung Tung Sahur, brainrot soviético.
+/// </summary>
 public static class Memes
 {
     private static readonly Random Rng = new();
 
     private static readonly Meme[] IdleHot =
     {
-        new("CUANDO CIERRAS EL JUEGO", "PERO LA GPU SIGUE A 80 GRADOS"),
-        new("YO: ME VOY A DORMIR", "MI PC: ¿Y EL CALOR RESIDUAL QUÉ, LISTO?"),
-        new("ESTO ESTÁ BIEN", "(TODO ESTÁ ARDIENDO)"),
-        new("NADIE:", "MI CPU A LAS 3 AM: MODO SAUNA"),
-        new("SESIÓN DE 6 HORAS", "PLACA BASE A LA PARRILLA"),
-        new("TU TORRE AHORA MISMO", "UNA FREIDORA DE AIRE CON RGB"),
-        new("APAGAR EL PC EN CALIENTE", "NI DE BROMA, BRO"),
-        new("SE PUEDEN HACER TOSTADAS", "ENCIMA DE TU GRÁFICA"),
-        new("EL CALOR RESIDUAL", "ESPERANDO A QUE APAGUES: :)"),
+        new("CUANDO MIRAS LA TEMPERATURA DE LA GPU", "FAAAAAAH"),
+        new("TU GRÁFICA DESPUÉS DE 6 HORAS DE VICIO", "COOKED. MUY COOKED."),
+        new("¿APAGAR EL PC A 80 GRADOS?", "SAY WALLAHI BRO"),
+        new("CALOR RESIDUAL EN LA PLACA BASE", "CANON EVENT DE TODO GAMER"),
+        new("APAGAR EL PC EN CALIENTE", "-1000 AURA"),
+        new("YO: ME VOY A DORMIR CON LA TORRE ASÍ", "LA TORRE: IM GOOD BRO"),
+        new("«SE ENFRÍA SOLO, TRANQUI»", "¿POR QUÉ IBA A ENGAÑARTE?"),
+        new("LA CPU MARCANDO SESENTA Y...", "6 7"),
+        new("TU CPU AHORA MISMO", "A UN GRADO DEL CRASH OUT"),
     };
 
     private static readonly Meme[] IdleCool =
     {
-        new("TODO FRESQUITO", "PERO NUNCA SE SABE"),
-        new("PREPARADO PARA MAXXEAR", "CUANDO TÚ DIGAS, JEFE"),
-        new("TEMPERATURAS DE PINGÜINO", "RESPETO MÁXIMO"),
-        new("ESTOY TAN TRANQUILO", "QUE PODRÍA SER UN SCREENSAVER"),
-        new("ESPERANDO ÓRDENES", "MIENTRAS GIRO SUAVECITO"),
+        new("TEMPERATURAS PERFECTAS", "LA PEACE"),
+        new("PC FRESQUITO SIN HACER NADA", "KINDA CHIC"),
+        new("¿QUÉ HA HECHO HOY EL VENTILADOR?", "EL ESPECIAL DE MBAPPÉ: NADA"),
+        new("ESPERANDO ÓRDENES", "MODO NPC ACTIVADO"),
+        new("TODO A 40 GRADOS", "DU BIST GUT GENUG"),
     };
 
     private static readonly Meme[] Cooling =
     {
-        new("VENTILADORES AL 100%", "EL VECINO CREE QUE ESTÁS DESPEGANDO"),
-        new("TORRE DE CONTROL", "DESPEGUE AUTORIZADO"),
-        new("TU GPU AHORA MISMO", "RESPIRANDO POR PRIMERA VEZ EN 6 HORAS"),
-        new("LA NASA HA LLAMADO", "QUIERE SU TÚNEL DE VIENTO DE VUELTA"),
-        new("TEMPERATURAS BAJANDO", "STONKS PERO AL REVÉS"),
-        new("ESTO NO ES UN PC", "ES UNA TURBINA CON RGB"),
-        new("AIRE ACONDICIONADO", "EDICIÓN GAMER LOW COST"),
-        new("SE VIENE", "EL INVIERNO (DENTRO DE TU TORRE)"),
-        new("MAMÁ: ¿QUÉ ES ESE RUIDO?", "YO: CIENCIA, MAMÁ. CIENCIA."),
-        new("POV:", "ERES UN VENTILADOR A 3000 RPM A LAS 3 AM"),
-        new("EL CALOR RESIDUAL", "HA ABANDONADO EL CHAT"),
-        new("BRRRRRRRRRRRRR", "BRRRRRRRRRRRRRRRRRRRR"),
-        new("NO ES RUIDO", "ES EL SONIDO DE LA VICTORIA"),
-        new("MODO HURACÁN", "NIVEL: SECADOR DE PELO DE DIOS"),
-        new("PELUSAS DEL DISIPADOR", "VOLANDO HACIA LA LIBERTAD"),
+        new("VENTILADORES AL 100%", "LOCKED IN"),
+        new("EL CALOR RESIDUAL VIENDO ESTO", "FAAAAAAAH"),
+        new("NO ES LOOKSMAXXING", "ES FANMAXXING"),
+        new("TUS VENTILADORES AHORA MISMO", "ROW! ROW! ROW!"),
+        new("CADA GRADO QUE BAJA", "+100 AURA"),
+        new("TUNG TUNG TUNG TUNG", "TURBINA SAHUR"),
+        new("DÉJALE QUE ENFRÍE", "LET HIM COOL"),
+        new("EL CAMARADA BRDYSHCH", "HA PROHIBIDO EL CALOR RESIDUAL"),
+        new("SOMEBODY GET THESE GRADOS", "OUT OF HERE"),
+        new("MAMÁ: ¿QUÉ ES ESE RUIDO?", "YO: MI ERA FANMAXXING"),
+        new("EL VECINO OYENDO LA TURBINA", "SAY WALLAHI QUE ES UN PC"),
+        new("LA GPU ANTES: COOKED", "LA GPU AHORA: LA PEACE"),
+        new("ESTOS VENTILADORES", "FRAME-MOGGEAN A UN AIRE ACONDICIONADO"),
     };
 
     private static readonly Meme[] Done =
     {
-        new("MISIÓN CUMPLIDA", "PC MÁS FRESCO QUE TU EX"),
-        new("CALOR RESIDUAL", "ELIMINADO"),
-        new("YA PUEDES APAGAR", "SIN COCINAR LA PLACA"),
-        new("GG WP", "TEMPERATURAS NORMALIZADAS"),
-        new("TU PC TE DA LAS GRACIAS", "(SI PUDIERA HABLAR)"),
+        new("TEMPERATURAS NORMALIZADAS", "+1000 AURA"),
+        new("ESTE PC BAJÓ 30 GRADOS EN 5 MINUTOS", "Y TIENE 20 AÑOS"),
+        new("EL CALOR RESIDUAL", "HA SIDO ELIMINADO. LA PEACE."),
+        new("TU PC AL LADO DEL DE TU COLEGA", "FRAME-MOGGING TÉRMICO"),
+        new("GG", "TU PLACA BASE TE DEBE UNA"),
     };
 
     private static readonly Meme[] Night =
     {
-        new("BUENAS NOCHES, GAMER", "MAÑANA MÁS (O ESTA NOCHE, NO JUZGO)"),
-        new("APAGANDO", "QUE SUEÑES CON 240 FPS"),
-        new("A DORMIR", "LOS DOS, TÚ Y LA GRÁFICA"),
+        new("BUENAS NOCHES, GAMER", "SLEEPMAXXING ACTIVADO"),
+        new("A DORMIR", "MAÑANA, LOCK IN OTRA VEZ"),
+        new("APAGANDO", "LA PEACE"),
     };
 
     private static readonly Meme[] Error =
     {
-        new("ALGO HA FALLADO", "NO ES UN BUG, ES UNA FEATURE"),
-        new("ERROR 404", "FRÍO NO ENCONTRADO"),
+        new("ALGO HA FALLADO", "FAAAAAAAH"),
+        new("ERROR", "SKILL ISSUE (MÍO, NO TUYO)"),
     };
 
-    private static readonly string[] DogeWords =
+    /// <summary>Etiquetas flotantes estilo texto de TikTok durante el enfriamiento.</summary>
+    private static readonly string[] Tags =
     {
-        "wow", "much frío", "such rpm", "very turbina", "so fresquito", "amaze",
-        "much aire", "wow 0 calor", "such viento", "very pingüino", "much brrr", "so huracán",
+        "FAAAH", "+1000 aura", "locked in", "6 7", "la peace", "W", "let him cool", "say wallahi",
+        "ROW!", "fanmaxxing", "frame-mog", "tung tung sahur", "kinda chic", "-15 °C", "not cooked",
     };
 
     private static int _lastIndex = -1;
@@ -97,35 +101,35 @@ public static class Memes
         return pool[i];
     }
 
-    public static string NextDoge() => DogeWords[Rng.Next(DogeWords.Length)];
+    public static string NextTag() => Tags[Rng.Next(Tags.Length)];
 
     public static (string Rank, string Next) RankFor(int cooldowns)
     {
         (int min, string name)[] ranks =
         {
-            (0, "Tostadora"), (1, "Microondas"), (3, "Ventilador de pie"), (7, "Aire acondicionado"),
-            (15, "Nevera industrial"), (30, "Pingüino emperador"), (60, "Cero absoluto"),
+            (0, "Cooked"), (1, "Medio cooked"), (3, "NPC del aire"), (7, "Locked in"),
+            (15, "Aura farmer"), (30, "Frame-mogger térmico"), (60, "La peace absoluta"),
         };
         int idx = 0;
         for (int i = 0; i < ranks.Length; i++) if (cooldowns >= ranks[i].min) idx = i;
         int left = idx + 1 < ranks.Length ? ranks[idx + 1].min - cooldowns : 0;
         string next = idx + 1 < ranks.Length
             ? $"{left} {(left == 1 ? "enfriamiento" : "enfriamientos")} para «{ranks[idx + 1].name}»"
-            : "Rango máximo. Eres leyenda.";
+            : "Rango máximo. Aura infinita.";
         return (ranks[idx].name, next);
     }
 
     public static (string Title, string Subtitle) Achievement(CooldownResult r)
     {
         if (r.BestDrop is not double drop)
-            return ("Enfriamiento a ciegas", "Sin sensores, pero con mucha fe");
+            return ("Enfriamiento a ciegas", "Sin sensores, pero say wallahi que ha enfriado");
         return drop switch
         {
-            >= 30 => ("Glaciar supremo", $"-{drop:0} °C. Eso no es enfriar, es criogenizar"),
-            >= 20 => ("Pingüino de élite", $"-{drop:0} °C de calor residual eliminado"),
-            >= 10 => ("Brisa fresquita", $"-{drop:0} °C. Tu placa base te quiere"),
-            >= 3 => ("Algo es algo", $"-{drop:0} °C. Ya estaba fresquito"),
-            _ => ("Ya estaba frío, máquina", "No había calor que quitar, pero bien visto"),
+            >= 30 => ("Aura infinita", $"-{drop:0} °C. Frame-mogging térmico nivel dios"),
+            >= 20 => ("+1000 aura", $"-{drop:0} °C de calor residual eliminado"),
+            >= 10 => ("Locked in", $"-{drop:0} °C. Tu placa base dice gracias"),
+            >= 3 => ("Kinda chic", $"-{drop:0} °C. Ya estaba fresquito, pero bien"),
+            _ => ("El especial de Mbappé", "Calor eliminado: nada. Ya estaba frío"),
         };
     }
 }

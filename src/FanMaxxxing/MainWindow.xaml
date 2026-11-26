@@ -127,19 +127,30 @@
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Grid.Row="2" Margin="2,16,0,0">
+                    <ScrollViewer Grid.Row="2" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" Focusable="False">
+                    <StackPanel Margin="2,0,2,0">
                         <TextBlock Text="DURACIÓN" Style="{StaticResource SectionTitle}" />
                         <WrapPanel x:Name="DurationPanel">
+                            <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="1 min" Tag="1" Checked="Duration_Checked" />
+                            <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="2 min" Tag="2" Checked="Duration_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="3 min" Tag="3" Checked="Duration_Checked" />
-                            <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="4 min" Tag="4" Checked="Duration_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="5 min" Tag="5" Checked="Duration_Checked" />
-                            <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="7 min" Tag="7" Checked="Duration_Checked" />
-                            <RadioButton Style="{StaticResource Pill}" GroupName="dur" Content="10 min" Tag="10" Checked="Duration_Checked" />
+                            <RadioButton x:Name="CustomDurationPill" Style="{StaticResource Pill}" GroupName="dur" Content="Personalizado" Tag="custom" Checked="Duration_Checked" />
                         </WrapPanel>
+                        <Grid x:Name="CustomDurationRow" Visibility="Collapsed" Margin="2,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="70" />
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="CustomDurationSlider" Style="{StaticResource NeonSlider}" Minimum="6" Maximum="30" TickFrequency="1"
+                                    IsSnapToTickEnabled="True" Value="8" VerticalAlignment="Center" ValueChanged="CustomDuration_Changed" />
+                            <TextBlock x:Name="CustomDurationText" Grid.Column="1" Text="8 min" FontFamily="{StaticResource NumFont}" FontSize="16"
+                                       FontWeight="SemiBold" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        </Grid>
 
                         <TextBlock Text="AL TERMINAR" Style="{StaticResource SectionTitle}" Margin="0,10,0,8" />
                         <WrapPanel x:Name="AfterPanel">
-                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Nada, sigo con el PC" Tag="Nothing" Checked="After_Checked" />
+                            <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Nada, sigo" Tag="Nothing" Checked="After_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Apagar" Tag="Shutdown" Checked="After_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Hibernar" Tag="Hibernate" Checked="After_Checked" />
                             <RadioButton Style="{StaticResource Pill}" GroupName="after" Content="Suspender" Tag="Sleep" Checked="After_Checked" />
@@ -149,9 +160,9 @@
                             <TextBlock x:Name="SmartStopText" TextWrapping="Wrap" Text="Parar antes si ya está todo frío" />
                         </CheckBox>
                     </StackPanel>
-
+                    </ScrollViewer>
                     <!-- Botón gordo -->
-                    <Button x:Name="MainButton" Grid.Row="3" Height="96" Margin="0,10,0,0" Cursor="Hand" Click="MainButton_Click" RenderTransformOrigin="0.5,0.5"
+                    <Button x:Name="MainButton" Grid.Row="3" Height="88" Margin="0,8,0,0" Cursor="Hand" Click="MainButton_Click" RenderTransformOrigin="0.5,0.5"
                             Background="{StaticResource NeonGradient}">
                         <Button.RenderTransform>
                             <ScaleTransform x:Name="MainButtonScale" />
